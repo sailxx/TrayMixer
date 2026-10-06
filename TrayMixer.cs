@@ -18,8 +18,8 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyTitle("TrayMixer")]
 [assembly: System.Reflection.AssemblyProduct("TrayMixer")]
 [assembly: System.Reflection.AssemblyDescription("Lightweight Windows 11 tray volume mixer")]
-[assembly: System.Reflection.AssemblyVersion("2.0.1.0")]
-[assembly: System.Reflection.AssemblyFileVersion("2.0.1.0")]
+[assembly: System.Reflection.AssemblyVersion("2.1.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("2.1.0.0")]
 
 namespace TrayMixer
 {
