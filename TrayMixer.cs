@@ -75,38 +75,44 @@ namespace TrayMixer
     static class Glyphs
     {
         public const string Speaker = "", Headphones = "", Mute = "", Bell = "", Monitor = "", Mixer = "";
+        public const string Sun = "";
         public const string Vol0 = "", Vol1 = "", Vol2 = "", Vol3 = "";
     }
 
     // ───────────────────────── Значок: три вертикальных фейдера ─────────────────────────
     static class Art
     {
-        // Логотип: три жирных скруглённых фейдера. Прорезь — ручка фейдера; ниже неё сплошной цвет (уровень),
-        // выше — полупрозрачный. На малых размерах всё выровнено по пикселям, чтобы значок в трее был чётким.
+        public static readonly Color Red = Color.FromArgb(255, 69, 58);
+
+        // Логотип: три горизонтальных слайдера Windows 11 — красный уровень и круглая ручка.
+        // c — цвет дорожки и ручек (белый или чёрный под тему панели задач), его прозрачность приглушает весь значок.
+        // На малых размерах всё выровнено по пикселям, чтобы значок в трее был чётким.
         public static void DrawMixer(Graphics g, RectangleF r, Color c)
         {
             int n = (int)Math.Min(r.Width, r.Height);
-            var oldSm = g.SmoothingMode; var oldPo = g.PixelOffsetMode; var oldClip = g.Clip;
+            var oldSm = g.SmoothingMode; var oldPo = g.PixelOffsetMode;
             g.SmoothingMode = SmoothingMode.AntiAlias; g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            int bw = Math.Max(3, (int)Math.Round(n * 0.2));           // ширина фейдера
-            int gap = Math.Max(2, (int)Math.Round(n * 0.12));         // расстояние между фейдерами
-            int cut = Math.Max(1, (int)Math.Round(n * 0.075));        // толщина прорези
-            int m = (n - (3 * bw + 2 * gap)) / 2;
-            int top = (int)Math.Round(n * 0.08), bot = n - (int)Math.Round(n * 0.08);
-            float[] lv = { 0.58f, 0.22f, 0.42f };
-            using (var solid = new SolidBrush(c))
-            using (var dim = new SolidBrush(Color.FromArgb(c.A * 45 / 100, c)))
+            int th = Math.Max(2, (int)Math.Round(n * 0.07));          // толщина дорожки
+            int kr = Math.Max(2, (int)Math.Round(n * 0.11));          // радиус ручки
+            int pad = Math.Max(1, (int)Math.Round(n * 0.08));         // поля слева и справа
+            float x0 = r.X + pad, x1 = r.X + n - pad;
+            float[] rows = { 0.22f, 0.5f, 0.78f }, lv = { 0.72f, 0.3f, 0.55f };
+            var red = Color.FromArgb(c.A, Red);
+            using (var track = new SolidBrush(Color.FromArgb(c.A * 40 / 100, c)))
+            using (var fill = new SolidBrush(red))
+            using (var knob = new SolidBrush(c))
                 for (int i = 0; i < 3; i++)
                 {
-                    float x = r.X + m + i * (bw + gap);
-                    float k = r.Y + (int)Math.Round(top + (bot - top) * lv[i]);
-                    using (var bar = RoundRect(new RectangleF(x, r.Y + top, bw, bot - top), bw / 2f))
-                    {
-                        g.SetClip(new RectangleF(x - 1, r.Y, bw + 2, k - r.Y)); g.FillPath(dim, bar);
-                        g.SetClip(new RectangleF(x - 1, k + cut, bw + 2, r.Bottom - k - cut)); g.FillPath(solid, bar);
-                    }
+                    float cy = r.Y + (float)Math.Round(n * rows[i]);
+                    float kx = (float)Math.Round(x0 + kr + (x1 - x0 - 2 * kr) * lv[i]);
+                    var tr = new RectangleF(x0, cy - th / 2f, x1 - x0, th);
+                    using (var p = RoundRect(tr, th / 2f)) g.FillPath(track, p);
+                    using (var p = RoundRect(new RectangleF(x0, tr.Y, kx - x0, th), th / 2f)) g.FillPath(fill, p);
+                    g.FillEllipse(knob, kx - kr, cy - kr, kr * 2, kr * 2);
+                    float ir = kr * 0.45f;                            // красная серединка ручки, если есть место
+                    if (kr >= 4) g.FillEllipse(fill, kx - ir, cy - ir, ir * 2, ir * 2);
                 }
-            g.Clip = oldClip; g.SmoothingMode = oldSm; g.PixelOffsetMode = oldPo;
+            g.SmoothingMode = oldSm; g.PixelOffsetMode = oldPo;
         }
 
         static GraphicsPath RoundRect(RectangleF r, float rad)
@@ -143,7 +149,13 @@ namespace TrayMixer
                         }
                         pngs.Add(ms.ToArray());
                     }
-                    if (n == 256) bmp.Save(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path)), "icon-preview.png"), ImageFormat.Png);
+                    if (n == 256)
+                        using (var prev = new Bitmap(n, n))
+                        {
+                            // Превью — на чёрном фоне, сама иконка остаётся прозрачной
+                            using (var g = Graphics.FromImage(prev)) { g.Clear(Color.Black); g.DrawImage(bmp, 0, 0); }
+                            prev.Save(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path)), "icon-preview.png"), ImageFormat.Png);
+                        }
                 }
             using (var w = new System.IO.BinaryWriter(System.IO.File.Create(path)))
             {
@@ -213,7 +225,7 @@ namespace TrayMixer
         public Func<bool> GetMute; public Action<bool> SetMute;
         public int Value; public bool Muted;
 
-        public void Sync() { try { Value = (int)Math.Round(GetVol() * 100); Muted = GetMute(); } catch { } }
+        public void Sync() { try { Value = (int)Math.Round(GetVol() * 100); Muted = GetMute != null && GetMute(); } catch { } }
     }
 
     // ───────────────────────── Всплывающее окно ─────────────────────────
@@ -282,6 +294,8 @@ namespace TrayMixer
             RefreshContent(true);
             Show(); Activate(); Native.SetForegroundWindow(Handle);
             sync.Start();
+            // Яркость читается в фоне: окно открывается сразу с прошлыми значениями
+            Brightness.ScanAsync(() => { try { BeginInvoke((Action)(() => RefreshContent(false))); } catch { } });
         }
 
         public void HidePopup()
@@ -298,12 +312,14 @@ namespace TrayMixer
         protected override bool ProcessCmdKey(ref Message msg, Keys key) { if (key == Keys.Escape) { HidePopup(); return true; } return base.ProcessCmdKey(ref msg, key); }
 
         // ── Данные ──
-        static string Sig(List<DeviceInfo> devs, List<AppInfo> apps)
+        static string Sig(List<DeviceInfo> devs, List<AppInfo> apps, List<Display> disps)
         {
             var sb = new StringBuilder();
             foreach (var d in devs) sb.Append(d.Id).Append(d.IsDefault ? "*" : "").Append('|');
             sb.Append("||");
             foreach (var a in apps) sb.Append(a.Key).Append(':').Append(a.Vols.Count).Append('|');
+            sb.Append("||");
+            foreach (var d in disps) sb.Append(d.Key).Append('|');
             return sb.ToString();
         }
 
@@ -319,13 +335,14 @@ namespace TrayMixer
             if (dragItem != null) return;
             List<DeviceInfo> devs; List<AppInfo> apps;
             try { devs = Audio.Devices(); apps = Audio.Apps(); } catch { return; }
-            string sig = Sig(devs, apps);
+            var disps = Brightness.Displays;
+            string sig = Sig(devs, apps, disps);
             if (!force && sig == signature) { SyncValues(); return; }
             signature = sig;
-            Build(devs, apps);
+            Build(devs, apps, disps);
         }
 
-        void Build(List<DeviceInfo> devs, List<AppInfo> apps)
+        void Build(List<DeviceInfo> devs, List<AppInfo> apps, List<Display> disps)
         {
             items.Clear(); hoverItem = null;
             foreach (var d in devs.FindAll(x => !Hidden.Is("dev:" + x.Id)))
@@ -357,6 +374,19 @@ namespace TrayMixer
                 });
             }
             if (apps.Count == 0) items.Add(new Item { K = Kind.Note, Text = "Сейчас ничего не воспроизводит звук" });
+            // Яркость экранов: раздел появляется, только если есть экран с регулируемой яркостью
+            var shown = disps.FindAll(x => !Hidden.Is("disp:" + x.Key));
+            if (shown.Count > 0) items.Add(new Item { K = Kind.Sep });
+            foreach (var d in shown)
+            {
+                var disp = d;
+                items.Add(new Item
+                {
+                    K = Kind.Row, Text = d.Name, Key = "disp:" + d.Key, Glyph = Glyphs.Sun,
+                    GetVol = () => disp.Percent / 100f,
+                    SetVol = v => disp.Set((int)Math.Round(v * 100))
+                });
+            }
             items.Add(new Item { K = Kind.Footer, Text = "Громкость" });
 
             int y = S(6);
@@ -446,6 +476,7 @@ namespace TrayMixer
         // Отладка: отрисовать окно поверх заданного фона без показа на экране
         public void RenderTo(string path, Color bg)
         {
+            try { Brightness.Scan(); } catch { }
             RefreshContent(true);
             using (var bmp = new Bitmap(Width, Height, PixelFormat.Format32bppPArgb))
             {
@@ -553,7 +584,7 @@ namespace TrayMixer
                 for (int i = 0; i < FooterUris.Length; i++) if (FooterBtn(it, i).Contains(p)) return 4 + i;
                 return 0;
             }
-            if (IconRect(it).Contains(p)) return 1;
+            if (it.SetMute != null && IconRect(it).Contains(p)) return 1;
             if (it.TitleClick != null && !it.IsDefault)
             {
                 var tr = TitleRect(it);
@@ -719,6 +750,7 @@ namespace TrayMixer
             };
             try { Audio.En.RegisterEndpointNotificationCallback(notifier); } catch { }
             Rebind();
+            Brightness.ScanAsync(null); // прогреть список экранов к первому открытию
             icon.Visible = true;
             Native.Trim();
         }

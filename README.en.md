@@ -31,7 +31,7 @@ The Windows 11 volume mixer is buried in Settings, and the tray volume icon cont
 | Click a **row icon** | Mute or unmute |
 | Click a **device name** | Make it the default device |
 | **Right-click** a row | Hide it |
-| **Mouse wheel** over a row | Volume ±2 |
+| **Mouse wheel** over a row | Volume or brightness ±2 |
 | **Esc** or click outside | Close |
 
 </details>
