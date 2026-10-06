@@ -251,7 +251,7 @@ namespace TrayMixer
         {
             this.backdrop = backdrop; s = scale;
             FormBorderStyle = FormBorderStyle.FixedSingle; ControlBox = false; MinimizeBox = MaximizeBox = false;
-            Text = "TrayMixer"; ShowInTaskbar = false; TopMost = true; StartPosition = FormStartPosition.Manual;
+            base.Text = "TrayMixer"; ShowInTaskbar = false; TopMost = true; StartPosition = FormStartPosition.Manual;
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.Opaque, true);
             fText = new Font(Theme.FontName, S(14), GraphicsUnit.Pixel);
             fValue = new Font(Theme.FontName, S(16), GraphicsUnit.Pixel);
@@ -548,7 +548,14 @@ namespace TrayMixer
         }
 
         // ── Мышь ──
-        Item RowAt(Point p) { foreach (var it in items) if ((it.K == Kind.Row || it.K == Kind.Footer) && p.Y >= it.Y && p.Y < it.Y + it.H) return it; return null; }
+        Item RowAt(Point p)
+        {
+            foreach (var it in items)
+            {
+                if ((it.K == Kind.Row || it.K == Kind.Footer) && p.Y >= it.Y && p.Y < it.Y + it.H) return it;
+            }
+            return null;
+        }
 
         int PartAt(Item it, Point p)
         {
@@ -678,7 +685,7 @@ namespace TrayMixer
         public int OnDeviceStateChanged(string id, int state) { Post(DevicesChanged); return 0; }
         public int OnDeviceAdded(string id) { Post(DevicesChanged); return 0; }
         public int OnDeviceRemoved(string id) { Post(DevicesChanged); return 0; }
-        public int OnDefaultDeviceChanged(int flow, int role, string id) { if (flow == 0 && role == 1) Post(DevicesChanged); return 0; }
+        public int OnDefaultDeviceChanged(int flow, int role, string id) { if (flow == 0 && role == 1) { Post(DevicesChanged); } return 0; }
         public int OnPropertyValueChanged(string id, PROPERTYKEY key) { return 0; }
         public int OnNotify(IntPtr data) { Post(VolumeChanged); return 0; }
     }
@@ -697,7 +704,7 @@ namespace TrayMixer
         public TrayApp(float scale)
         {
             popup = new Popup(Theme.RegInt(CfgKey, "Backdrop", Popup.Mica), scale);
-            popup.CreateControl(); var h = popup.Handle;
+            popup.CreateControl(); GC.KeepAlive(popup.Handle); // окно нужно сразу: через него приходят уведомления
 
             try { Native.SetPreferredAppMode(1); Native.FlushMenuThemes(); } catch { } // тёмное контекстное меню
             micaItem = new MenuItem("Фон: Mica", delegate { SetBackdrop(Popup.Mica); }) { RadioCheck = true };
@@ -839,7 +846,7 @@ namespace TrayMixer
             if (args.Length > 1 && args[0] == "--make-icon" && args[1].EndsWith(".ico", StringComparison.OrdinalIgnoreCase)) { Art.WriteIco(args[1]); return; }
             if (args.Length > 1 && args[0] == "--render" && args[1].EndsWith(".png", StringComparison.OrdinalIgnoreCase)) { var p = new Popup(Popup.Mica, scale); p.CreateControl(); p.RenderTo(args[1], Color.FromArgb(32, 32, 32)); return; }
             bool created;
-            using (var mtx = new Mutex(true, @"Local\TrayMixer_7c1f3e2a-5b0d-4f9e-9a61-2d8c4b7e1a90", out created))
+            using (new Mutex(true, @"Local\TrayMixer_7c1f3e2a-5b0d-4f9e-9a61-2d8c4b7e1a90", out created))
             {
                 if (!created) return;
                 // При первом запуске включаем автозапуск; путь обновляется, если exe перенесли

@@ -25,7 +25,7 @@ jobs:
         with:
           languages: csharp
           build-mode: manual
-          queries: security-and-quality
+          queries: security-extended
       - name: Build
         shell: cmd
         run: build.cmd
