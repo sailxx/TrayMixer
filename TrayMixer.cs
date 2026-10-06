@@ -81,27 +81,32 @@ namespace TrayMixer
     // ───────────────────────── Значок: три вертикальных фейдера ─────────────────────────
     static class Art
     {
-        // Рисует символ микшера в квадрате r. На малых размерах всё выровнено по пикселям — без размытия.
+        // Логотип: три жирных скруглённых фейдера. Прорезь — ручка фейдера; ниже неё сплошной цвет (уровень),
+        // выше — полупрозрачный. На малых размерах всё выровнено по пикселям, чтобы значок в трее был чётким.
         public static void DrawMixer(Graphics g, RectangleF r, Color c)
         {
-            float n = Math.Min(r.Width, r.Height);
-            var oldSm = g.SmoothingMode; var oldPo = g.PixelOffsetMode;
+            int n = (int)Math.Min(r.Width, r.Height);
+            var oldSm = g.SmoothingMode; var oldPo = g.PixelOffsetMode; var oldClip = g.Clip;
             g.SmoothingMode = SmoothingMode.AntiAlias; g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            float tw = Math.Max(2, (float)Math.Round(n * 0.09));            // толщина дорожки
-            float cw = Math.Max(tw + 2, (float)Math.Round(n * 0.27));       // ширина ручки
-            float ch = Math.Max(4, (float)Math.Round(n * 0.2));             // высота ручки
-            float top = r.Y + (float)Math.Round(n * 0.08), bot = r.Y + n - (float)Math.Round(n * 0.08);
-            float[] xs = { 0.19f, 0.5f, 0.81f }, lv = { 0.66f, 0.3f, 0.52f };
-            using (var b = new SolidBrush(c))
+            int bw = Math.Max(3, (int)Math.Round(n * 0.2));           // ширина фейдера
+            int gap = Math.Max(2, (int)Math.Round(n * 0.12));         // расстояние между фейдерами
+            int cut = Math.Max(1, (int)Math.Round(n * 0.075));        // толщина прорези
+            int m = (n - (3 * bw + 2 * gap)) / 2;
+            int top = (int)Math.Round(n * 0.08), bot = n - (int)Math.Round(n * 0.08);
+            float[] lv = { 0.58f, 0.22f, 0.42f };
+            using (var solid = new SolidBrush(c))
+            using (var dim = new SolidBrush(Color.FromArgb(c.A * 45 / 100, c)))
                 for (int i = 0; i < 3; i++)
                 {
-                    float cx = r.X + (float)Math.Round(n * xs[i] - tw / 2) + tw / 2;
-                    g.FillRectangle(b, cx - tw / 2, top, tw, bot - top);
-                    float ky = (float)Math.Round(top + (bot - top) * lv[i] - ch / 2);
-                    using (var p = RoundRect(new RectangleF((float)Math.Round(cx - cw / 2), ky, cw, ch), Math.Max(1, ch * 0.3f)))
-                        g.FillPath(b, p);
+                    float x = r.X + m + i * (bw + gap);
+                    float k = r.Y + (int)Math.Round(top + (bot - top) * lv[i]);
+                    using (var bar = RoundRect(new RectangleF(x, r.Y + top, bw, bot - top), bw / 2f))
+                    {
+                        g.SetClip(new RectangleF(x - 1, r.Y, bw + 2, k - r.Y)); g.FillPath(dim, bar);
+                        g.SetClip(new RectangleF(x - 1, k + cut, bw + 2, r.Bottom - k - cut)); g.FillPath(solid, bar);
+                    }
                 }
-            g.SmoothingMode = oldSm; g.PixelOffsetMode = oldPo;
+            g.Clip = oldClip; g.SmoothingMode = oldSm; g.PixelOffsetMode = oldPo;
         }
 
         static GraphicsPath RoundRect(RectangleF r, float rad)

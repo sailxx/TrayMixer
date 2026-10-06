@@ -58,18 +58,24 @@ static class ReadmeArt
     }
 
     // Символ микшера — та же геометрия, что у иконки программы (три вертикальных фейдера)
+    static int clipId;
+
+    // Логотип — та же геометрия, что у иконки программы: три фейдера с прорезью-ручкой
     static string Mixer(double x, double y, double n, string color)
     {
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
         var sb = new StringBuilder();
-        double tw = n * 0.09, cw = n * 0.27, ch = n * 0.2, top = y + n * 0.08, bot = y + n * 0.92;
-        double[] xs = { 0.19, 0.5, 0.81 }, lv = { 0.66, 0.3, 0.52 };
+        double bw = n * 0.2, gap = n * 0.12, cut = n * 0.075, m = (n - (3 * bw + 2 * gap)) / 2, top = y + n * 0.08, bot = y + n * 0.92;
+        double[] lv = { 0.58, 0.22, 0.42 };
         for (int i = 0; i < 3; i++)
         {
-            double cx = x + n * xs[i], ky = top + (bot - top) * lv[i] - ch / 2;
-            sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture,
-                "<rect x='{0:0.##}' y='{1:0.##}' width='{2:0.##}' height='{3:0.##}' rx='{4:0.##}' fill='{5}'/>", cx - tw / 2, top, tw, bot - top, tw / 2, color);
-            sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture,
-                "<rect x='{0:0.##}' y='{1:0.##}' width='{2:0.##}' height='{3:0.##}' rx='{4:0.##}' fill='{5}'/>", cx - cw / 2, ky, cw, ch, ch * 0.3, color);
+            double bx = x + m + i * (bw + gap), k = top + (bot - top) * lv[i];
+            string a = "c" + (clipId++), b = "c" + (clipId++);
+            sb.AppendFormat(ci, "<clipPath id='{0}'><rect x='{1:0.##}' y='{2:0.##}' width='{3:0.##}' height='{4:0.##}'/></clipPath>", a, bx - 1, y, bw + 2, k - y);
+            sb.AppendFormat(ci, "<clipPath id='{0}'><rect x='{1:0.##}' y='{2:0.##}' width='{3:0.##}' height='{4:0.##}'/></clipPath>", b, bx - 1, k + cut, bw + 2, y + n - k - cut);
+            string bar = string.Format(ci, "x='{0:0.##}' y='{1:0.##}' width='{2:0.##}' height='{3:0.##}' rx='{4:0.##}' fill='{5}'", bx, top, bw, bot - top, bw / 2, color);
+            sb.Append("<rect " + bar + " fill-opacity='0.45' clip-path='url(#" + a + ")'/>");
+            sb.Append("<rect " + bar + " clip-path='url(#" + b + ")'/>");
         }
         return sb.ToString();
     }
