@@ -1,0 +1,4 @@
+# Build output (releases are built by GitHub Actions)
+*.exe
+*.pdb
+icon-preview.png
