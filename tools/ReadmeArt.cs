@@ -57,25 +57,22 @@ static class ReadmeArt
             (glow ? "<rect x='" + x + "' y='" + y + "' width='" + w + "' height='" + h + "' rx='8' fill='url(#glow)'/><rect x='" + x + "' y='" + y + "' width='" + w + "' height='" + h + "' rx='8' fill='url(#glow2)'/>" : "");
     }
 
-    // Символ микшера — та же геометрия, что у иконки программы (три вертикальных фейдера)
-    static int clipId;
+    // Логотип — та же геометрия, что у иконки программы: три горизонтальных слайдера с красным уровнем
+    const string Red = "#FF453A";
 
-    // Логотип — та же геометрия, что у иконки программы: три фейдера с прорезью-ручкой
-    static string Mixer(double x, double y, double n, string color)
+    static string Mixer(double x, double y, double n)
     {
         var ci = System.Globalization.CultureInfo.InvariantCulture;
         var sb = new StringBuilder();
-        double bw = n * 0.2, gap = n * 0.12, cut = n * 0.075, m = (n - (3 * bw + 2 * gap)) / 2, top = y + n * 0.08, bot = y + n * 0.92;
-        double[] lv = { 0.58, 0.22, 0.42 };
+        double th = n * 0.07, kr = n * 0.11, x0 = x + n * 0.08, x1 = x + n * 0.92;
+        double[] rows = { 0.22, 0.5, 0.78 }, lv = { 0.72, 0.3, 0.55 };
         for (int i = 0; i < 3; i++)
         {
-            double bx = x + m + i * (bw + gap), k = top + (bot - top) * lv[i];
-            string a = "c" + (clipId++), b = "c" + (clipId++);
-            sb.AppendFormat(ci, "<clipPath id='{0}'><rect x='{1:0.##}' y='{2:0.##}' width='{3:0.##}' height='{4:0.##}'/></clipPath>", a, bx - 1, y, bw + 2, k - y);
-            sb.AppendFormat(ci, "<clipPath id='{0}'><rect x='{1:0.##}' y='{2:0.##}' width='{3:0.##}' height='{4:0.##}'/></clipPath>", b, bx - 1, k + cut, bw + 2, y + n - k - cut);
-            string bar = string.Format(ci, "x='{0:0.##}' y='{1:0.##}' width='{2:0.##}' height='{3:0.##}' rx='{4:0.##}' fill='{5}'", bx, top, bw, bot - top, bw / 2, color);
-            sb.Append("<rect " + bar + " fill-opacity='0.45' clip-path='url(#" + a + ")'/>");
-            sb.Append("<rect " + bar + " clip-path='url(#" + b + ")'/>");
+            double cy = y + n * rows[i], kx = x0 + kr + (x1 - x0 - 2 * kr) * lv[i];
+            sb.AppendFormat(ci, "<rect x='{0:0.##}' y='{1:0.##}' width='{2:0.##}' height='{3:0.##}' rx='{4:0.##}' fill='#fff' fill-opacity='0.4'/>", x0, cy - th / 2, x1 - x0, th, th / 2);
+            sb.AppendFormat(ci, "<rect x='{0:0.##}' y='{1:0.##}' width='{2:0.##}' height='{3:0.##}' rx='{4:0.##}' fill='{5}'/>", x0, cy - th / 2, kx - x0, th, th / 2, Red);
+            sb.AppendFormat(ci, "<circle cx='{0:0.##}' cy='{1:0.##}' r='{2:0.##}' fill='#fff'/>", kx, cy, kr);
+            sb.AppendFormat(ci, "<circle cx='{0:0.##}' cy='{1:0.##}' r='{2:0.##}' fill='{3}'/>", kx, cy, kr * 0.45, Red);
         }
         return sb.ToString();
     }
@@ -96,11 +93,9 @@ static class ReadmeArt
     static string Hero(bool ru)
     {
         var b = new StringBuilder();
-        b.Append(Card(0, 0, 880, 300, true));
-        // Плитка с иконкой
-        b.Append("<rect x='56' y='64' width='96' height='96' rx='20' fill='url(#tile)'/>");
-        b.Append("<rect x='56.5' y='64.5' width='95' height='95' rx='19.5' fill='none' stroke='#fff' stroke-opacity='0.25'/>");
-        b.Append(Mixer(76, 84, 56, "#fff"));
+        // Чёрная карта и логотип без плитки
+        b.Append("<rect x='0.5' y='0.5' width='879' height='299' rx='8' fill='#000' stroke='url(#stroke)'/>");
+        b.Append(Mixer(56, 64, 96));
         b.Append(Text(184, 118, "TrayMixer", 54, "#fff", "600"));
         b.Append(Text(186, 154, ru ? "Громкость каждого устройства и приложения" : "Volume for every device and every app", 20, "#fff", "400", "start", 0.86));
         b.Append(Text(186, 180, ru ? "в одном окне в стиле Windows 11" : "in one native Windows 11 flyout", 20, "#fff", "400", "start", 0.86));

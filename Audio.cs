@@ -133,7 +133,7 @@ namespace TrayMixer
         [PreserveSig] int SetDefaultEndpoint([MarshalAs(UnmanagedType.LPWStr)] string id, int role);
     }
 
-    static class Native
+    static partial class Native
     {
         [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr h);
         [DllImport("ole32.dll")] public static extern int PropVariantClear(ref PROPVARIANT pv);
