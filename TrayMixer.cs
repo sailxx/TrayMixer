@@ -160,61 +160,44 @@ namespace TrayMixer
         }
     }
 
-    // ───────────────────────── Текст через GDI с альфа-каналом ─────────────────────────
-    // GDI+ рисует текст мыльно. Рисуем системным GDI (сглаживание в оттенках серого) белым по чёрному,
-    // яркость пикселя превращаем в прозрачность и красим в нужный цвет — чёткий текст поверх Mica.
+    // ───────────────────────── Гладкий текст ─────────────────────────
+    // Текст рисуется в 3 раза крупнее с честной прозрачностью и плавно уменьшается:
+    // сглаживание как у DirectWrite/macOS, без «пикселей» и поверх Mica.
     static class GdiText
     {
-        [StructLayout(LayoutKind.Sequential)] struct RECT { public int L, T, R, B; }
-        [DllImport("gdi32.dll", CharSet = CharSet.Unicode)] static extern IntPtr CreateFont(int h, int w, int esc, int orient, int weight, int italic, int underline, int strike, int charset, int outPrec, int clipPrec, int quality, int pitch, string face);
-        [DllImport("gdi32.dll")] static extern int SetTextColor(IntPtr hdc, int c);
-        [DllImport("gdi32.dll")] static extern int SetBkMode(IntPtr hdc, int m);
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int DrawText(IntPtr hdc, string s, int n, ref RECT r, int flags);
+        const int K = 3;
+        static readonly System.Collections.Generic.Dictionary<string, Font> Big = new System.Collections.Generic.Dictionary<string, Font>();
 
-        static readonly Dictionary<string, IntPtr> Fonts = new Dictionary<string, IntPtr>();
-
-        static IntPtr HFont(Font f)
+        static Font BigFont(Font f)
         {
-            string key = f.Name + "|" + f.Size + "|" + (f.Bold ? 1 : 0);
-            IntPtr h;
-            if (!Fonts.TryGetValue(key, out h))
-                Fonts[key] = h = CreateFont(-(int)Math.Round(f.Size), 0, 0, 0, f.Bold ? 600 : 400, 0, 0, 0, 1, 0, 0, 4 /*ANTIALIASED_QUALITY*/, 0, f.Name);
-            return h;
+            string key = f.Name + "|" + f.Size + "|" + (int)f.Style;
+            Font b;
+            if (!Big.TryGetValue(key, out b)) Big[key] = b = new Font(f.FontFamily, f.Size * K, f.Style, GraphicsUnit.Pixel);
+            return b;
         }
 
         public static void Draw(Graphics g, string s, Font f, Color c, RectangleF rf, StringAlignment align)
         {
             if (string.IsNullOrEmpty(s)) return;
             var r = Rectangle.Round(rf);
-            int w = Math.Max(1, r.Width), h = Math.Max(1, r.Height);
-            var bi = new Native.BITMAPINFOHEADER { biSize = 40, biWidth = w, biHeight = -h, biPlanes = 1, biBitCount = 32 };
-            IntPtr bits;
-            IntPtr dib = Native.CreateDIBSection(IntPtr.Zero, ref bi, 0, out bits, IntPtr.Zero, 0);
-            IntPtr dc = Native.CreateCompatibleDC(IntPtr.Zero);
-            IntPtr oldB = Native.SelectObject(dc, dib), oldF = Native.SelectObject(dc, HFont(f));
-            SetTextColor(dc, 0xFFFFFF); SetBkMode(dc, 1);
-            var rc = new RECT { R = w, B = h };
-            int flags = 0x20 | 0x4 | 0x800 | 0x8000 | (align == StringAlignment.Center ? 0x1 : align == StringAlignment.Far ? 0x2 : 0); // SINGLELINE|VCENTER|NOPREFIX|END_ELLIPSIS
-            DrawText(dc, s, s.Length, ref rc, flags);
-            Native.GdiFlush();
-            var px = new int[w * h];
-            Marshal.Copy(bits, px, 0, px.Length);
-            Native.SelectObject(dc, oldF); Native.SelectObject(dc, oldB); Native.DeleteDC(dc); Native.DeleteObject(dib);
-
-            int rgb = c.ToArgb() & 0xFFFFFF;
-            for (int i = 0; i < px.Length; i++)
+            if (r.Width <= 0 || r.Height <= 0) return;
+            using (var big = new Bitmap(r.Width * K, r.Height * K, PixelFormat.Format32bppPArgb))
             {
-                int cov = (px[i] >> 8) & 0xFF; // зелёный канал = покрытие пикселя
-                px[i] = cov == 0 ? 0 : ((cov * c.A / 255) << 24) | rgb;
-            }
-            using (var bmp = new Bitmap(w, h, PixelFormat.Format32bppArgb))
-            {
-                var bd = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
-                Marshal.Copy(px, 0, bd.Scan0, px.Length);
-                bmp.UnlockBits(bd);
-                var oldI = g.InterpolationMode; g.InterpolationMode = InterpolationMode.NearestNeighbor;
-                g.DrawImage(bmp, r.X, r.Y, w, h);
-                g.InterpolationMode = oldI;
+                using (var bg = Graphics.FromImage(big))
+                using (var sf = new StringFormat(StringFormat.GenericTypographic)
+                {
+                    Alignment = align, LineAlignment = StringAlignment.Center,
+                    Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap
+                })
+                using (var b = new SolidBrush(c))
+                {
+                    bg.TextRenderingHint = TextRenderingHint.AntiAlias;
+                    bg.DrawString(s, BigFont(f), b, new RectangleF(0, 0, big.Width, big.Height), sf);
+                }
+                var oldI = g.InterpolationMode; var oldP = g.PixelOffsetMode;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.DrawImage(big, r);
+                g.InterpolationMode = oldI; g.PixelOffsetMode = oldP;
             }
         }
     }
@@ -469,7 +452,7 @@ namespace TrayMixer
                 using (var g = Graphics.FromImage(bmp)) Render(g);
                 using (var outp = new Bitmap(Width, Height))
                 {
-                    using (var g = Graphics.FromImage(outp)) { g.Clear(bg); g.DrawImage(bmp, 0, 0); }
+                    using (var g = Graphics.FromImage(outp)) { g.Clear(T.Light ? Color.FromArgb(243, 243, 243) : bg); g.DrawImage(bmp, 0, 0); }
                     outp.Save(path);
                 }
             }
