@@ -1,6 +1,6 @@
 <div align="center">
 
-[Русский](README.md) · **English**
+[Русский](README.md) · **English** · [Español](README.es.md) · [Português](README.pt.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Italiano](README.it.md) · [Türkçe](README.tr.md) · [Українська](README.uk.md) · [Polski](README.pl.md)
 
 <br>
 
@@ -35,6 +35,9 @@ The Windows 11 volume mixer is buried in Settings, and the tray volume icon cont
 | **Esc** or click outside | Close |
 
 </details>
+
+> [!NOTE]
+> The TrayMixer interface is in Russian.
 
 <br>
 
@@ -81,6 +84,14 @@ TrayMixer\build.cmd
 ```
 
 The C# compiler ships with Windows — nothing to install. `tools\readme-art.cmd` regenerates the README images.
+
+| File | What is inside |
+|---|---|
+| `TrayMixer.cs` | Window, Mica rendering, tray, settings |
+| `Audio.cs` | Windows Core Audio: devices, apps, notifications |
+| `Brightness.cs` | Screen brightness: DDC/CI for external monitors, WMI for the laptop screen |
+| `app.manifest` | Runs without admin rights |
+| `tools/` | README image generator |
 
 ## License
 

@@ -6,6 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Text;
+using System.Collections.Generic;
 
 static class ReadmeArt
 {
@@ -17,16 +18,41 @@ static class ReadmeArt
     {
         outDir = args[0];
         Directory.CreateDirectory(outDir);
-        foreach (var lang in new[] { "ru", "en" })
+        foreach (var l in Langs.All)
         {
-            bool ru = lang == "ru";
-            Save("hero-" + lang + ".svg", Hero(ru));
-            Save("cta-" + lang + ".svg", Cta(ru));
-            Save("features-" + lang + ".svg", Features(ru));
-            Save("numbers-" + lang + ".svg", Numbers(ru));
-            Save("security-" + lang + ".svg", Security(ru));
+            Save("hero-" + l.Code + ".svg", Hero(l));
+            Save("cta-" + l.Code + ".svg", Cta(l));
+            Save("features-" + l.Code + ".svg", Features(l));
+            Save("numbers-" + l.Code + ".svg", Numbers(l));
+            Save("security-" + l.Code + ".svg", Security(l));
         }
         if (args.Length > 1) Screenshot(args[1], Path.Combine(outDir, "screenshot.png"));
+        if (overflow) { Console.Error.WriteLine("Есть тексты шире своего места — сократите их в ReadmeLang.cs"); Environment.Exit(1); }
+    }
+
+    // Ширина текста в пикселях по Segoe UI — так плашки и переносы подстраиваются под любой язык
+    static readonly Graphics measure = Graphics.FromImage(new Bitmap(1, 1));
+    static bool overflow;
+    static double Width(string s, int size, bool bold)
+    {
+        using (var f = new System.Drawing.Font("Segoe UI", size, bold ? FontStyle.Bold : FontStyle.Regular, GraphicsUnit.Pixel))
+            return measure.MeasureString(s, f, int.MaxValue, StringFormat.GenericTypographic).Width;
+    }
+    static string Fit(string s, int size, bool bold, double max)
+    {
+        if (Width(s, size, bold) > max) { overflow = true; Console.Error.WriteLine("Не помещается (" + max + " px): " + s); }
+        return s;
+    }
+    static List<string> Wrap(string s, int size, double max)
+    {
+        var lines = new List<string>(); string cur = "";
+        foreach (var w in s.Split(' '))
+        {
+            string next = cur.Length == 0 ? w : cur + " " + w;
+            if (cur.Length > 0 && Width(next, size, false) > max) { lines.Add(cur); cur = w; } else cur = next;
+        }
+        if (cur.Length > 0) lines.Add(cur);
+        return lines;
     }
 
     static void Save(string name, string svg) { File.WriteAllText(Path.Combine(outDir, name), svg, new UTF8Encoding(false)); }
@@ -90,37 +116,37 @@ static class ReadmeArt
             Text(x + w / 2, y + 21, s, 13, "#fff", "500", "middle", 0.9);
     }
 
-    static string Hero(bool ru)
+    static string Hero(Lang l)
     {
         var b = new StringBuilder();
         // Чёрная карта и логотип без плитки
         b.Append("<rect x='0.5' y='0.5' width='879' height='299' rx='8' fill='#000' stroke='url(#stroke)'/>");
         b.Append(Mixer(56, 64, 96));
         b.Append(Text(184, 118, "TrayMixer", 54, "#fff", "600"));
-        b.Append(Text(186, 154, ru ? "Громкость каждого устройства и приложения" : "Volume for every device and every app", 20, "#fff", "400", "start", 0.86));
-        b.Append(Text(186, 180, ru ? "в одном окне в стиле Windows 11" : "in one native Windows 11 flyout", 20, "#fff", "400", "start", 0.86));
-        string[] chips = ru ? new[] { "Mica · Acrylic", "~2 МБ памяти", "0% CPU", "Без установки", "Открытый код" }
-                            : new[] { "Mica · Acrylic", "~2 MB RAM", "0% CPU", "No install", "Open source" };
-        int[] widths = ru ? new[] { 132, 132, 84, 132, 130 } : new[] { 132, 112, 84, 104, 118 };
+        b.Append(Text(186, 154, Fit(l.Line1, 20, false, 660), 20, "#fff", "400", "start", 0.86));
+        b.Append(Text(186, 180, Fit(l.Line2, 20, false, 660), 20, "#fff", "400", "start", 0.86));
         int px = 56;
-        for (int i = 0; i < chips.Length; i++) { b.Append(Pill(px, 222, widths[i], chips[i])); px += widths[i] + 10; }
-        return Svg(880, 300, ru ? "TrayMixer — громкость каждого устройства и приложения в одном окне Windows 11" : "TrayMixer — volume for every device and app in one Windows 11 flyout", b.ToString());
+        foreach (var chip in l.Chips)
+        {
+            int w = (int)Math.Ceiling(Width(chip, 13, true) + 34);
+            b.Append(Pill(px, 222, w, chip)); px += w + 10;
+        }
+        if (px - 10 > 840) { overflow = true; Console.Error.WriteLine("Плашки шапки не помещаются: " + l.Code); }
+        return Svg(880, 300, l.Alt, b.ToString());
     }
 
-    static string Cta(bool ru)
+    static string Cta(Lang l)
     {
-        string label = ru ? "Скачать для Windows 11" : "Download for Windows 11";
-        int w = ru ? 286 : 290;
+        int w = (int)Math.Ceiling(Width(l.Cta, 16, true) + 52 + 26);
         var b = new StringBuilder();
         b.Append("<rect x='0' y='0' width='" + w + "' height='48' rx='6' fill='" + Accent + "'/>");
         b.Append("<rect x='0.5' y='0.5' width='" + (w - 1) + "' height='47' rx='5.5' fill='none' stroke='#fff' stroke-opacity='0.3'/>");
         b.Append("<rect x='0' y='45' width='" + w + "' height='3' rx='1.5' fill='#000' fill-opacity='0.12'/>");
         // Стрелка загрузки
         b.Append("<path d='M30 15v13m-5-5 5 5 5-5M23 33h14' stroke='#000' stroke-opacity='0.9' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>");
-        b.Append(Text(52, 30, label, 16, "#000", "600", "start", 0.9));
-        return Svg(w, 48, label, b.ToString());
+        b.Append(Text(52, 30, l.Cta, 16, "#000", "600", "start", 0.9));
+        return Svg(w, 48, l.Cta, b.ToString());
     }
-
     // Иконки возможностей (простые формы, чтобы одинаково выглядели везде)
     static string Icon(int kind, int x, int y)
     {
@@ -136,27 +162,10 @@ static class ReadmeArt
         }
     }
 
-    static string Features(bool ru)
+    static string Features(Lang l)
     {
-        string[][] f = ru ? new[]
-        {
-            new[] { "Все устройства", "Наушники, колонки, монитор —", "у каждого свой ползунок. Клик", "по имени делает его основным." },
-            new[] { "Каждое приложение", "Браузер, игра и Discord —", "отдельно, с их иконками.", "Несколько вкладок = одна строка." },
-            new[] { "Родной Windows 11", "Mica или Acrylic, скруглённые", "углы, тёмная и светлая тема,", "ваш цвет акцента." },
-            new[] { "Ничего лишнего", "Правый клик — скрыть строку.", "Вернуть можно в меню трея.", "Всё запоминается." },
-            new[] { "Мгновенно и легко", "Слушает события Windows вместо", "опроса: 0% CPU в простое", "и около 2 МБ памяти." },
-            new[] { "Безопасно", "Без интернета и прав админа.", "Открытый код, сборка на GitHub", "с подтверждением происхождения." },
-        } : new[]
-        {
-            new[] { "Every device", "Headphones, speakers, monitor —", "each gets its own slider. Click", "a name to make it the default." },
-            new[] { "Every app", "Browser, game and Discord —", "separately, with their icons.", "Many tabs = one row." },
-            new[] { "Native Windows 11", "Mica or Acrylic, rounded", "corners, dark and light theme,", "your accent color." },
-            new[] { "Nothing extra", "Right-click a row to hide it.", "Bring it back from the tray menu.", "Everything is remembered." },
-            new[] { "Instant and light", "Listens to Windows events instead", "of polling: 0% CPU when idle", "and about 2 MB of RAM." },
-            new[] { "Secure", "No internet, no admin rights.", "Open source, built on GitHub", "with provenance attestation." },
-        };
         var b = new StringBuilder();
-        b.Append(Text(4, 26, ru ? "ВОЗМОЖНОСТИ" : "FEATURES", 13, Accent, "600"));
+        b.Append(Text(4, 26, l.FeaturesTitle, 13, Accent, "600"));
         int cw = 284, chh = 152, gap = 14;
         for (int i = 0; i < 6; i++)
         {
@@ -164,67 +173,43 @@ static class ReadmeArt
             b.Append(Card(x, y, cw, chh, false));
             b.Append("<rect x='" + (x + 20) + "' y='" + (y + 20) + "' width='40' height='40' rx='8' fill='" + Accent + "' fill-opacity='0.12'/>");
             b.Append(Icon(i, x + 28, y + 28));
-            b.Append(Text(x + 76, y + 46, f[i][0], 17, "#fff", "600"));
-            for (int l = 1; l < 4; l++) b.Append(Text(x + 20, y + 68 + l * 20, f[i][l], 13, "#fff", "400", "start", 0.72));
+            b.Append(Text(x + 76, y + 46, Fit(l.Features[i][0], 17, true, cw - 76 - 12), 17, "#fff", "600"));
+            var lines = Wrap(l.Features[i][1], 13, cw - 44);
+            if (lines.Count > 3) { overflow = true; Console.Error.WriteLine("Больше трёх строк: " + l.Features[i][1]); }
+            for (int k = 0; k < lines.Count; k++) b.Append(Text(x + 20, y + 88 + k * 20, lines[k], 13, "#fff", "400", "start", 0.72));
         }
-        return Svg(880, 44 + 2 * chh + gap, ru ? "Возможности TrayMixer" : "TrayMixer features", b.ToString());
+        return Svg(880, 44 + 2 * chh + gap, l.FeaturesAlt, b.ToString());
     }
 
-    static string Numbers(bool ru)
+    static string Numbers(Lang l)
     {
-        string[][] n = ru ? new[]
-        {
-            new[] { "~2 МБ", "памяти в простое" }, new[] { "0%", "CPU без опроса" },
-            new[] { "160 КБ", "один exe-файл" }, new[] { "0", "зависимостей" },
-        } : new[]
-        {
-            new[] { "~2 MB", "RAM when idle" }, new[] { "0%", "CPU, no polling" },
-            new[] { "160 KB", "a single exe" }, new[] { "0", "dependencies" },
-        };
         var b = new StringBuilder();
-        b.Append(Text(4, 26, ru ? "ЛЁГКИЙ, КАК СИСТЕМНЫЙ" : "AS LIGHT AS A SYSTEM APP", 13, Accent, "600"));
+        b.Append(Text(4, 26, l.NumbersTitle, 13, Accent, "600"));
         int w = 209, gap = 14;
         for (int i = 0; i < 4; i++)
         {
             int x = i * (w + gap);
             b.Append(Card(x, 44, w, 120, i == 0));
-            b.Append(Text(x + 22, 44 + 62, n[i][0], 38, "#fff", "600"));
-            b.Append(Text(x + 22, 44 + 94, n[i][1], 14, "#fff", "400", "start", 0.72));
+            b.Append(Text(x + 22, 44 + 62, l.Numbers[i][0], 38, "#fff", "600"));
+            b.Append(Text(x + 22, 44 + 94, Fit(l.Numbers[i][1], 14, false, w - 36), 14, "#fff", "400", "start", 0.72));
         }
-        return Svg(880, 164, ru ? "TrayMixer в цифрах" : "TrayMixer by the numbers", b.ToString());
+        return Svg(880, 164, l.NumbersAlt, b.ToString());
     }
 
-    static string Security(bool ru)
+    static string Security(Lang l)
     {
-        string[] items = ru ? new[]
-        {
-            "Работает без прав администратора (манифест asInvoker)",
-            "Нет сети: не отправляет и не скачивает ничего",
-            "Системные DLL только из System32 — защита от подмены",
-            "Релизы собирает GitHub Actions + SHA-256 и attestation",
-            "Проверка кода CodeQL при каждом изменении",
-            "Настройки — только в HKCU\\Software\\TrayMixer",
-        } : new[]
-        {
-            "Runs without admin rights (asInvoker manifest)",
-            "No network: never sends or downloads anything",
-            "System DLLs from System32 only — no DLL hijacking",
-            "Releases built by GitHub Actions + SHA-256 & attestation",
-            "CodeQL code scanning on every change",
-            "Settings live only in HKCU\\Software\\TrayMixer",
-        };
         var b = new StringBuilder();
         b.Append(Card(0, 0, 880, 222, true));
         b.Append(Icon(5, 28, 26));
-        b.Append(Text(64, 45, ru ? "Безопасность" : "Security", 20, "#fff", "600"));
-        for (int i = 0; i < items.Length; i++)
+        b.Append(Text(64, 45, l.SecurityTitle, 20, "#fff", "600"));
+        for (int i = 0; i < l.Security.Length; i++)
         {
             int x = 28 + (i % 2) * 420, y = 92 + (i / 2) * 46;
             b.Append("<circle cx='" + (x + 10) + "' cy='" + (y - 5) + "' r='10' fill='" + Accent + "' fill-opacity='0.14'/>");
             b.Append("<path d='M" + (x + 5.5) + " " + (y - 5) + "l3 3 6-6' stroke='" + Accent + "' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>");
-            b.Append(Text(x + 30, y, items[i], 14, "#fff", "400", "start", 0.82));
+            b.Append(Text(x + 30, y, Fit(l.Security[i], 14, false, 420 - 30 - 8), 14, "#fff", "400", "start", 0.82));
         }
-        return Svg(880, 222, ru ? "Безопасность TrayMixer" : "TrayMixer security", b.ToString());
+        return Svg(880, 222, l.SecurityAlt, b.ToString());
     }
 
     // Скриншот окна на фоне в духе обоев Windows 11: скруглённые углы, рамка и мягкая тень
