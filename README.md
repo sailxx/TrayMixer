@@ -38,7 +38,7 @@
 
 <br>
 
-<img src="assets/readme/numbers-ru.svg" width="100%" alt="~2 МБ памяти, 0% CPU, 160 КБ, 0 зависимостей">
+<img src="assets/readme/numbers-ru.svg" width="100%" alt="~2 МБ памяти, 0% CPU, 165 КБ, 0 зависимостей">
 
 <br>
 

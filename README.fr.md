@@ -41,7 +41,7 @@ Le mélangeur de volume de Windows 11 est caché dans les Paramètres, et l’ic
 
 <br>
 
-<img src="assets/readme/numbers-fr.svg" width="100%" alt="~2 Mo de RAM, 0 % CPU, 160 Ko, 0 dépendance">
+<img src="assets/readme/numbers-fr.svg" width="100%" alt="~2 Mo de RAM, 0 % CPU, 165 Ko, 0 dépendance">
 
 <br>
 

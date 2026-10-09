@@ -41,7 +41,7 @@
 
 <br>
 
-<img src="assets/readme/numbers-uk.svg" width="100%" alt="~2 МБ пам’яті, 0% CPU, 160 КБ, 0 залежностей">
+<img src="assets/readme/numbers-uk.svg" width="100%" alt="~2 МБ пам’яті, 0% CPU, 165 КБ, 0 залежностей">
 
 <br>
 

@@ -41,7 +41,7 @@ The Windows 11 volume mixer is buried in Settings, and the tray volume icon cont
 
 <br>
 
-<img src="assets/readme/numbers-en.svg" width="100%" alt="~2 MB RAM, 0% CPU, 160 KB, 0 dependencies">
+<img src="assets/readme/numbers-en.svg" width="100%" alt="~2 MB RAM, 0% CPU, 165 KB, 0 dependencies">
 
 <br>
 

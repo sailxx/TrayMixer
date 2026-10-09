@@ -41,7 +41,7 @@ Der Lautstärkemixer von Windows 11 ist in den Einstellungen versteckt, und das 
 
 <br>
 
-<img src="assets/readme/numbers-de.svg" width="100%" alt="~2 MB RAM, 0% CPU, 160 KB, 0 Abhängigkeiten">
+<img src="assets/readme/numbers-de.svg" width="100%" alt="~2 MB RAM, 0% CPU, 165 KB, 0 Abhängigkeiten">
 
 <br>
 

@@ -41,7 +41,7 @@ Windows 11'in ses karıştırıcısı Ayarlar'ın içinde saklı, tepsideki ses 
 
 <br>
 
-<img src="assets/readme/numbers-tr.svg" width="100%" alt="~2 MB RAM, %0 CPU, 160 KB, 0 bağımlılık">
+<img src="assets/readme/numbers-tr.svg" width="100%" alt="~2 MB RAM, %0 CPU, 165 KB, 0 bağımlılık">
 
 <br>
 

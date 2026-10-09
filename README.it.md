@@ -41,7 +41,7 @@ Il mixer del volume di Windows 11 è nascosto nelle Impostazioni, e l’icona de
 
 <br>
 
-<img src="assets/readme/numbers-it.svg" width="100%" alt="~2 MB di RAM, 0% di CPU, 160 KB, 0 dipendenze">
+<img src="assets/readme/numbers-it.svg" width="100%" alt="~2 MB di RAM, 0% di CPU, 165 KB, 0 dipendenze">
 
 <br>
 

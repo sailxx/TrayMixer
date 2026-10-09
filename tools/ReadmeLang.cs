@@ -32,7 +32,7 @@ static class Langs
                 new[] { "Безопасно", "Без интернета и прав админа. Открытый код, сборка на GitHub с подтверждением происхождения." },
             },
             NumbersTitle = "ЛЁГКИЙ, КАК СИСТЕМНЫЙ", NumbersAlt = "TrayMixer в цифрах",
-            Numbers = new[] { new[] { "~2 МБ", "памяти в простое" }, new[] { "0%", "CPU без опроса" }, new[] { "160 КБ", "один exe-файл" }, new[] { "0", "зависимостей" } },
+            Numbers = new[] { new[] { "~2 МБ", "памяти в простое" }, new[] { "0%", "CPU без опроса" }, new[] { "165 КБ", "один exe-файл" }, new[] { "0", "зависимостей" } },
             SecurityTitle = "Безопасность", SecurityAlt = "Безопасность TrayMixer",
             Security = new[]
             {
@@ -62,7 +62,7 @@ static class Langs
                 new[] { "Secure", "No internet, no admin rights. Open source, built on GitHub with provenance attestation." },
             },
             NumbersTitle = "AS LIGHT AS A SYSTEM APP", NumbersAlt = "TrayMixer by the numbers",
-            Numbers = new[] { new[] { "~2 MB", "RAM when idle" }, new[] { "0%", "CPU, no polling" }, new[] { "160 KB", "a single exe" }, new[] { "0", "dependencies" } },
+            Numbers = new[] { new[] { "~2 MB", "RAM when idle" }, new[] { "0%", "CPU, no polling" }, new[] { "165 KB", "a single exe" }, new[] { "0", "dependencies" } },
             SecurityTitle = "Security", SecurityAlt = "TrayMixer security",
             Security = new[]
             {
@@ -92,7 +92,7 @@ static class Langs
                 new[] { "Seguro", "Sin internet ni permisos de administrador. Código abierto, compilado en GitHub con atestación de origen." },
             },
             NumbersTitle = "TAN LIGERO COMO EL SISTEMA", NumbersAlt = "TrayMixer en cifras",
-            Numbers = new[] { new[] { "~2 MB", "de RAM en reposo" }, new[] { "0%", "CPU, sin sondeo" }, new[] { "160 KB", "un solo exe" }, new[] { "0", "dependencias" } },
+            Numbers = new[] { new[] { "~2 MB", "de RAM en reposo" }, new[] { "0%", "CPU, sin sondeo" }, new[] { "165 KB", "un solo exe" }, new[] { "0", "dependencias" } },
             SecurityTitle = "Seguridad", SecurityAlt = "Seguridad de TrayMixer",
             Security = new[]
             {
@@ -122,7 +122,7 @@ static class Langs
                 new[] { "Seguro", "Sem internet nem direitos de administrador. Código aberto, compilado no GitHub com atestado de origem." },
             },
             NumbersTitle = "LEVE COMO UM APP DO SISTEMA", NumbersAlt = "TrayMixer em números",
-            Numbers = new[] { new[] { "~2 MB", "de RAM em repouso" }, new[] { "0%", "CPU, sem consultas" }, new[] { "160 KB", "um único exe" }, new[] { "0", "dependências" } },
+            Numbers = new[] { new[] { "~2 MB", "de RAM em repouso" }, new[] { "0%", "CPU, sem consultas" }, new[] { "165 KB", "um único exe" }, new[] { "0", "dependências" } },
             SecurityTitle = "Segurança", SecurityAlt = "Segurança do TrayMixer",
             Security = new[]
             {
@@ -152,7 +152,7 @@ static class Langs
                 new[] { "Sicher", "Kein Internet, keine Adminrechte. Open Source, auf GitHub gebaut mit Herkunftsnachweis." },
             },
             NumbersTitle = "SO LEICHT WIE EINE SYSTEM-APP", NumbersAlt = "TrayMixer in Zahlen",
-            Numbers = new[] { new[] { "~2 MB", "RAM im Leerlauf" }, new[] { "0%", "CPU, kein Polling" }, new[] { "160 KB", "eine einzige exe" }, new[] { "0", "Abhängigkeiten" } },
+            Numbers = new[] { new[] { "~2 MB", "RAM im Leerlauf" }, new[] { "0%", "CPU, kein Polling" }, new[] { "165 KB", "eine einzige exe" }, new[] { "0", "Abhängigkeiten" } },
             SecurityTitle = "Sicherheit", SecurityAlt = "Sicherheit von TrayMixer",
             Security = new[]
             {
@@ -182,7 +182,7 @@ static class Langs
                 new[] { "Sécurisé", "Sans internet ni droits admin. Open source, compilé sur GitHub avec attestation de provenance." },
             },
             NumbersTitle = "AUSSI LÉGER QU’UNE APPLI SYSTÈME", NumbersAlt = "TrayMixer en chiffres",
-            Numbers = new[] { new[] { "~2 Mo", "de RAM au repos" }, new[] { "0 %", "CPU, sans sondage" }, new[] { "160 Ko", "un seul exe" }, new[] { "0", "dépendance" } },
+            Numbers = new[] { new[] { "~2 Mo", "de RAM au repos" }, new[] { "0 %", "CPU, sans sondage" }, new[] { "165 Ko", "un seul exe" }, new[] { "0", "dépendance" } },
             SecurityTitle = "Sécurité", SecurityAlt = "Sécurité de TrayMixer",
             Security = new[]
             {
@@ -212,7 +212,7 @@ static class Langs
                 new[] { "Sicuro", "Niente internet né diritti di amministratore. Open source, compilato su GitHub con attestazione." },
             },
             NumbersTitle = "LEGGERO COME UN’APP DI SISTEMA", NumbersAlt = "TrayMixer in numeri",
-            Numbers = new[] { new[] { "~2 MB", "di RAM a riposo" }, new[] { "0%", "CPU, niente polling" }, new[] { "160 KB", "un solo exe" }, new[] { "0", "dipendenze" } },
+            Numbers = new[] { new[] { "~2 MB", "di RAM a riposo" }, new[] { "0%", "CPU, niente polling" }, new[] { "165 KB", "un solo exe" }, new[] { "0", "dipendenze" } },
             SecurityTitle = "Sicurezza", SecurityAlt = "Sicurezza di TrayMixer",
             Security = new[]
             {
@@ -242,7 +242,7 @@ static class Langs
                 new[] { "Güvenli", "İnternet ve yönetici hakkı yok. Açık kaynak, kaynağı doğrulanmış GitHub derlemesi." },
             },
             NumbersTitle = "SİSTEM UYGULAMASI KADAR HAFİF", NumbersAlt = "Rakamlarla TrayMixer",
-            Numbers = new[] { new[] { "~2 MB", "boştayken RAM" }, new[] { "%0", "CPU, sorgulama yok" }, new[] { "160 KB", "tek bir exe" }, new[] { "0", "bağımlılık" } },
+            Numbers = new[] { new[] { "~2 MB", "boştayken RAM" }, new[] { "%0", "CPU, sorgulama yok" }, new[] { "165 KB", "tek bir exe" }, new[] { "0", "bağımlılık" } },
             SecurityTitle = "Güvenlik", SecurityAlt = "TrayMixer güvenliği",
             Security = new[]
             {
@@ -272,7 +272,7 @@ static class Langs
                 new[] { "Безпечно", "Без інтернету й прав адміна. Відкритий код, збірка на GitHub із підтвердженням походження." },
             },
             NumbersTitle = "ЛЕГКИЙ, ЯК СИСТЕМНИЙ", NumbersAlt = "TrayMixer у цифрах",
-            Numbers = new[] { new[] { "~2 МБ", "пам’яті в простої" }, new[] { "0%", "CPU без опитування" }, new[] { "160 КБ", "один exe-файл" }, new[] { "0", "залежностей" } },
+            Numbers = new[] { new[] { "~2 МБ", "пам’яті в простої" }, new[] { "0%", "CPU без опитування" }, new[] { "165 КБ", "один exe-файл" }, new[] { "0", "залежностей" } },
             SecurityTitle = "Безпека", SecurityAlt = "Безпека TrayMixer",
             Security = new[]
             {
@@ -302,7 +302,7 @@ static class Langs
                 new[] { "Bezpieczny", "Bez internetu i praw administratora. Otwarty kod, budowany na GitHub z poświadczeniem pochodzenia." },
             },
             NumbersTitle = "LEKKI JAK APLIKACJA SYSTEMOWA", NumbersAlt = "TrayMixer w liczbach",
-            Numbers = new[] { new[] { "~2 MB", "RAM w spoczynku" }, new[] { "0%", "CPU, bez odpytywania" }, new[] { "160 KB", "jeden plik exe" }, new[] { "0", "zależności" } },
+            Numbers = new[] { new[] { "~2 MB", "RAM w spoczynku" }, new[] { "0%", "CPU, bez odpytywania" }, new[] { "165 KB", "jeden plik exe" }, new[] { "0", "zależności" } },
             SecurityTitle = "Bezpieczeństwo", SecurityAlt = "Bezpieczeństwo TrayMixer",
             Security = new[]
             {
