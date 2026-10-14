@@ -6,7 +6,7 @@
 
 <img src="assets/readme/hero-ru.svg" width="100%" alt="TrayMixer — громкость каждого устройства и приложения в одном окне Windows 11">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-ru.svg" height="44" alt="Скачать для Windows 11"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-ru.svg" height="52" alt="Скачать для Windows 11"></a>
 
 </div>
 

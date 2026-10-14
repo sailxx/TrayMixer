@@ -6,7 +6,7 @@
 
 <img src="assets/readme/hero-tr.svg" width="100%" alt="TrayMixer — her cihazın ve uygulamanın sesi tek bir Windows 11 penceresinde">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-tr.svg" height="44" alt="Windows 11 için indir"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-tr.svg" height="52" alt="Windows 11 için indir"></a>
 
 </div>
 

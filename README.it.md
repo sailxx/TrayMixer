@@ -6,7 +6,7 @@
 
 <img src="assets/readme/hero-it.svg" width="100%" alt="TrayMixer — il volume di ogni dispositivo e app in una finestra di Windows 11">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-it.svg" height="44" alt="Scarica per Windows 11"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-it.svg" height="52" alt="Scarica per Windows 11"></a>
 
 </div>
 

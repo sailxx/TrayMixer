@@ -6,7 +6,7 @@
 
 <img src="assets/readme/hero-de.svg" width="100%" alt="TrayMixer — Lautstärke jedes Geräts und jeder App in einem Windows-11-Fenster">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-de.svg" height="44" alt="Für Windows 11 herunterladen"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-de.svg" height="52" alt="Für Windows 11 herunterladen"></a>
 
 </div>
 

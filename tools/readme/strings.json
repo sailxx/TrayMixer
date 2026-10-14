@@ -1,0 +1,752 @@
+{
+  "ru": {
+    "alt": "TrayMixer — громкость каждого устройства и приложения в одном окне Windows 11",
+    "line1": "Громкость каждого устройства и приложения",
+    "line2": "в одном окне в стиле Windows 11",
+    "cta": "Скачать для Windows 11",
+    "featuresTitle": "ВОЗМОЖНОСТИ",
+    "featuresAlt": "Возможности TrayMixer",
+    "numbersTitle": "ЛЁГКИЙ, КАК СИСТЕМНЫЙ",
+    "numbersAlt": "TrayMixer в цифрах",
+    "securityTitle": "Безопасность",
+    "securityAlt": "Безопасность TrayMixer",
+    "chips": [
+      "Mica · Acrylic",
+      "~2 МБ памяти",
+      "0% CPU",
+      "Без установки",
+      "Открытый код"
+    ],
+    "security": [
+      "Работает без прав администратора (манифест asInvoker)",
+      "Нет сети: не отправляет и не скачивает ничего",
+      "Системные DLL только из System32 — защита от подмены",
+      "Релизы собирает GitHub Actions + SHA-256 и attestation",
+      "Проверка кода CodeQL при каждом изменении",
+      "Настройки — только в HKCU\\Software\\TrayMixer"
+    ],
+    "features": [
+      [
+        "Все устройства",
+        "Наушники, колонки, монитор — у каждого свой ползунок. Клик по имени делает его основным."
+      ],
+      [
+        "Каждое приложение",
+        "Браузер, игра и Discord — отдельно, с их иконками. Несколько вкладок = одна строка."
+      ],
+      [
+        "Родной Windows 11",
+        "Mica или Acrylic, скруглённые углы, тёмная и светлая тема, ваш цвет акцента."
+      ],
+      [
+        "Ничего лишнего",
+        "Правый клик — скрыть строку. Вернуть можно в меню трея. Всё запоминается."
+      ],
+      [
+        "Мгновенно и легко",
+        "Слушает события Windows вместо опроса: 0% CPU в простое и около 2 МБ памяти."
+      ],
+      [
+        "Безопасно",
+        "Без интернета и прав админа. Открытый код, сборка на GitHub с подтверждением происхождения."
+      ]
+    ],
+    "numbers": [
+      [
+        "~2 МБ",
+        "памяти в простое"
+      ],
+      [
+        "0%",
+        "CPU без опроса"
+      ],
+      [
+        "165 КБ",
+        "один exe-файл"
+      ],
+      [
+        "0",
+        "зависимостей"
+      ]
+    ],
+    "featuresHead": "Все звуки — *в одном окне*",
+    "numbersChip": "В цифрах",
+    "numbersHead": "Лёгкий, *как системный*",
+    "securityHead": "Безопасный *по замыслу*"
+  },
+  "en": {
+    "alt": "TrayMixer — volume for every device and app in one Windows 11 flyout",
+    "line1": "Volume for every device and every app",
+    "line2": "in one native Windows 11 flyout",
+    "cta": "Download for Windows 11",
+    "featuresTitle": "FEATURES",
+    "featuresAlt": "TrayMixer features",
+    "numbersTitle": "AS LIGHT AS A SYSTEM APP",
+    "numbersAlt": "TrayMixer by the numbers",
+    "securityTitle": "Security",
+    "securityAlt": "TrayMixer security",
+    "chips": [
+      "Mica · Acrylic",
+      "~2 MB RAM",
+      "0% CPU",
+      "No install",
+      "Open source"
+    ],
+    "security": [
+      "Runs without admin rights (asInvoker manifest)",
+      "No network: never sends or downloads anything",
+      "System DLLs from System32 only — no DLL hijacking",
+      "Releases built by GitHub Actions + SHA-256 & attestation",
+      "CodeQL code scanning on every change",
+      "Settings live only in HKCU\\Software\\TrayMixer"
+    ],
+    "features": [
+      [
+        "Every device",
+        "Headphones, speakers, monitor — each gets its own slider. Click a name to make it the default."
+      ],
+      [
+        "Every app",
+        "Browser, game and Discord — separately, with their icons. Many tabs = one row."
+      ],
+      [
+        "Native Windows 11",
+        "Mica or Acrylic, rounded corners, dark and light theme, your accent color."
+      ],
+      [
+        "Nothing extra",
+        "Right-click a row to hide it. Bring it back from the tray menu. Everything is remembered."
+      ],
+      [
+        "Instant and light",
+        "Listens to Windows events instead of polling: 0% CPU when idle and about 2 MB of RAM."
+      ],
+      [
+        "Secure",
+        "No internet, no admin rights. Open source, built on GitHub with provenance attestation."
+      ]
+    ],
+    "numbers": [
+      [
+        "~2 MB",
+        "RAM when idle"
+      ],
+      [
+        "0%",
+        "CPU, no polling"
+      ],
+      [
+        "165 KB",
+        "a single exe"
+      ],
+      [
+        "0",
+        "dependencies"
+      ]
+    ],
+    "featuresHead": "Every sound — *in one flyout*",
+    "numbersChip": "By the numbers",
+    "numbersHead": "As light as *a system app*",
+    "securityHead": "Safe *by design*"
+  },
+  "es": {
+    "alt": "TrayMixer — el volumen de cada dispositivo y aplicación en una sola ventana de Windows 11",
+    "line1": "El volumen de cada dispositivo y aplicación",
+    "line2": "en una sola ventana al estilo de Windows 11",
+    "cta": "Descargar para Windows 11",
+    "featuresTitle": "FUNCIONES",
+    "featuresAlt": "Funciones de TrayMixer",
+    "numbersTitle": "TAN LIGERO COMO EL SISTEMA",
+    "numbersAlt": "TrayMixer en cifras",
+    "securityTitle": "Seguridad",
+    "securityAlt": "Seguridad de TrayMixer",
+    "chips": [
+      "Mica · Acrylic",
+      "~2 MB de RAM",
+      "0% CPU",
+      "Sin instalar",
+      "Código abierto"
+    ],
+    "security": [
+      "Sin permisos de administrador (manifiesto asInvoker)",
+      "Sin red: no envía ni descarga nada",
+      "DLL del sistema solo desde System32, sin suplantación",
+      "Versiones compiladas en GitHub Actions + SHA-256",
+      "Análisis de código CodeQL en cada cambio",
+      "Ajustes solo en HKCU\\Software\\TrayMixer"
+    ],
+    "features": [
+      [
+        "Todos los dispositivos",
+        "Auriculares, altavoces, monitor: cada uno con su control. Un clic en el nombre lo vuelve predeterminado."
+      ],
+      [
+        "Cada aplicación",
+        "Navegador, juego y Discord por separado, con sus iconos. Varias pestañas = una fila."
+      ],
+      [
+        "Windows 11 nativo",
+        "Mica o Acrylic, esquinas redondeadas, tema oscuro y claro, tu color de acento."
+      ],
+      [
+        "Nada que sobre",
+        "Clic derecho para ocultar una fila. Se recupera desde el menú de la bandeja. Todo se recuerda."
+      ],
+      [
+        "Rápido y ligero",
+        "Escucha los eventos de Windows en lugar de consultar: 0% de CPU en reposo y unos 2 MB de RAM."
+      ],
+      [
+        "Seguro",
+        "Sin internet ni permisos de administrador. Código abierto, compilado en GitHub con atestación de origen."
+      ]
+    ],
+    "numbers": [
+      [
+        "~2 MB",
+        "de RAM en reposo"
+      ],
+      [
+        "0%",
+        "CPU, sin sondeo"
+      ],
+      [
+        "165 KB",
+        "un solo exe"
+      ],
+      [
+        "0",
+        "dependencias"
+      ]
+    ],
+    "featuresHead": "Todo el sonido — *en una ventana*",
+    "numbersChip": "En cifras",
+    "numbersHead": "Tan ligero *como el sistema*",
+    "securityHead": "Seguro *por diseño*"
+  },
+  "pt": {
+    "alt": "TrayMixer — o volume de cada dispositivo e aplicativo em uma janela do Windows 11",
+    "line1": "O volume de cada dispositivo e aplicativo",
+    "line2": "em uma única janela no estilo do Windows 11",
+    "cta": "Baixar para Windows 11",
+    "featuresTitle": "RECURSOS",
+    "featuresAlt": "Recursos do TrayMixer",
+    "numbersTitle": "LEVE COMO UM APP DO SISTEMA",
+    "numbersAlt": "TrayMixer em números",
+    "securityTitle": "Segurança",
+    "securityAlt": "Segurança do TrayMixer",
+    "chips": [
+      "Mica · Acrylic",
+      "~2 MB de RAM",
+      "0% CPU",
+      "Sem instalar",
+      "Código aberto"
+    ],
+    "security": [
+      "Sem direitos de administrador (manifesto asInvoker)",
+      "Sem rede: não envia nem baixa nada",
+      "DLLs do sistema só do System32, sem sequestro de DLL",
+      "Versões compiladas no GitHub Actions + SHA-256",
+      "Análise de código CodeQL a cada mudança",
+      "Configurações só em HKCU\\Software\\TrayMixer"
+    ],
+    "features": [
+      [
+        "Todos os dispositivos",
+        "Fones, caixas de som, monitor — cada um com seu controle. Um clique no nome o torna o padrão."
+      ],
+      [
+        "Cada aplicativo",
+        "Navegador, jogo e Discord separados, com seus ícones. Várias abas = uma linha."
+      ],
+      [
+        "Windows 11 nativo",
+        "Mica ou Acrylic, cantos arredondados, tema escuro e claro, sua cor de destaque."
+      ],
+      [
+        "Nada sobrando",
+        "Clique direito para ocultar uma linha. Ela volta pelo menu da bandeja. Tudo fica salvo."
+      ],
+      [
+        "Rápido e leve",
+        "Ouve os eventos do Windows em vez de consultar: 0% de CPU em repouso e cerca de 2 MB de RAM."
+      ],
+      [
+        "Seguro",
+        "Sem internet nem direitos de administrador. Código aberto, compilado no GitHub com atestado de origem."
+      ]
+    ],
+    "numbers": [
+      [
+        "~2 MB",
+        "de RAM em repouso"
+      ],
+      [
+        "0%",
+        "CPU, sem consultas"
+      ],
+      [
+        "165 KB",
+        "um único exe"
+      ],
+      [
+        "0",
+        "dependências"
+      ]
+    ],
+    "featuresHead": "Todo o som — *numa só janela*",
+    "numbersChip": "Em números",
+    "numbersHead": "Leve como *um app do sistema*",
+    "securityHead": "Seguro *por design*"
+  },
+  "de": {
+    "alt": "TrayMixer — Lautstärke jedes Geräts und jeder App in einem Windows-11-Fenster",
+    "line1": "Lautstärke für jedes Gerät und jede App",
+    "line2": "in einem Fenster im Windows-11-Stil",
+    "cta": "Für Windows 11 laden",
+    "featuresTitle": "FUNKTIONEN",
+    "featuresAlt": "Funktionen von TrayMixer",
+    "numbersTitle": "SO LEICHT WIE EINE SYSTEM-APP",
+    "numbersAlt": "TrayMixer in Zahlen",
+    "securityTitle": "Sicherheit",
+    "securityAlt": "Sicherheit von TrayMixer",
+    "chips": [
+      "Mica · Acrylic",
+      "~2 MB RAM",
+      "0% CPU",
+      "Ohne Installation",
+      "Open Source"
+    ],
+    "security": [
+      "Läuft ohne Adminrechte (Manifest asInvoker)",
+      "Kein Netzwerk: sendet und lädt nichts",
+      "System-DLLs nur aus System32 — kein DLL-Hijacking",
+      "Releases von GitHub Actions + SHA-256 & Attestation",
+      "CodeQL-Codeprüfung bei jeder Änderung",
+      "Einstellungen nur in HKCU\\Software\\TrayMixer"
+    ],
+    "features": [
+      [
+        "Alle Geräte",
+        "Kopfhörer, Lautsprecher, Monitor — jedes mit eigenem Regler. Klick auf den Namen macht es zum Standard."
+      ],
+      [
+        "Jede App",
+        "Browser, Spiel und Discord getrennt, mit ihren Symbolen. Viele Tabs = eine Zeile."
+      ],
+      [
+        "Echtes Windows 11",
+        "Mica oder Acrylic, abgerundete Ecken, helles und dunkles Design, deine Akzentfarbe."
+      ],
+      [
+        "Nichts Überflüssiges",
+        "Rechtsklick blendet eine Zeile aus. Zurückholen im Tray-Menü. Alles wird gespeichert."
+      ],
+      [
+        "Schnell und leicht",
+        "Hört auf Windows-Ereignisse statt abzufragen: 0% CPU im Leerlauf und etwa 2 MB RAM."
+      ],
+      [
+        "Sicher",
+        "Kein Internet, keine Adminrechte. Open Source, auf GitHub gebaut mit Herkunftsnachweis."
+      ]
+    ],
+    "numbers": [
+      [
+        "~2 MB",
+        "RAM im Leerlauf"
+      ],
+      [
+        "0%",
+        "CPU, kein Polling"
+      ],
+      [
+        "165 KB",
+        "eine einzige exe"
+      ],
+      [
+        "0",
+        "Abhängigkeiten"
+      ]
+    ],
+    "featuresHead": "Jeder Ton — *in einem Fenster*",
+    "numbersChip": "In Zahlen",
+    "numbersHead": "So leicht wie *eine System-App*",
+    "securityHead": "Sicher *von Grund auf*"
+  },
+  "fr": {
+    "alt": "TrayMixer — le volume de chaque appareil et application dans une fenêtre Windows 11",
+    "line1": "Le volume de chaque appareil et application",
+    "line2": "dans une seule fenêtre au style Windows 11",
+    "cta": "Télécharger pour Windows 11",
+    "featuresTitle": "FONCTIONNALITÉS",
+    "featuresAlt": "Fonctionnalités de TrayMixer",
+    "numbersTitle": "AUSSI LÉGER QU’UNE APPLI SYSTÈME",
+    "numbersAlt": "TrayMixer en chiffres",
+    "securityTitle": "Sécurité",
+    "securityAlt": "Sécurité de TrayMixer",
+    "chips": [
+      "Mica · Acrylic",
+      "~2 Mo de RAM",
+      "0 % CPU",
+      "Sans installation",
+      "Open source"
+    ],
+    "security": [
+      "Sans droits administrateur (manifeste asInvoker)",
+      "Aucun réseau : n’envoie et ne télécharge rien",
+      "DLL système uniquement depuis System32",
+      "Versions compilées par GitHub Actions + SHA-256",
+      "Analyse du code CodeQL à chaque modification",
+      "Réglages uniquement dans HKCU\\Software\\TrayMixer"
+    ],
+    "features": [
+      [
+        "Tous les appareils",
+        "Casque, enceintes, écran : chacun son curseur. Un clic sur le nom en fait l’appareil par défaut."
+      ],
+      [
+        "Chaque application",
+        "Navigateur, jeu et Discord séparément, avec leurs icônes. Plusieurs onglets = une ligne."
+      ],
+      [
+        "Windows 11 natif",
+        "Mica ou Acrylic, coins arrondis, thème sombre et clair, votre couleur d’accent."
+      ],
+      [
+        "Rien de superflu",
+        "Clic droit pour masquer une ligne. Elle revient via le menu de la barre. Tout est mémorisé."
+      ],
+      [
+        "Instantané et léger",
+        "Écoute les événements de Windows au lieu d’interroger : 0 % CPU au repos et environ 2 Mo de RAM."
+      ],
+      [
+        "Sécurisé",
+        "Sans internet ni droits admin. Open source, compilé sur GitHub avec attestation de provenance."
+      ]
+    ],
+    "numbers": [
+      [
+        "~2 Mo",
+        "de RAM au repos"
+      ],
+      [
+        "0 %",
+        "CPU, sans sondage"
+      ],
+      [
+        "165 Ko",
+        "un seul exe"
+      ],
+      [
+        "0",
+        "dépendance"
+      ]
+    ],
+    "featuresHead": "Tout le son — *dans une fenêtre*",
+    "numbersChip": "En chiffres",
+    "numbersHead": "Aussi léger *qu’une appli système*",
+    "securityHead": "Sûr *par conception*"
+  },
+  "it": {
+    "alt": "TrayMixer — il volume di ogni dispositivo e app in una finestra di Windows 11",
+    "line1": "Il volume di ogni dispositivo e di ogni app",
+    "line2": "in un’unica finestra in stile Windows 11",
+    "cta": "Scarica per Windows 11",
+    "featuresTitle": "FUNZIONI",
+    "featuresAlt": "Funzioni di TrayMixer",
+    "numbersTitle": "LEGGERO COME UN’APP DI SISTEMA",
+    "numbersAlt": "TrayMixer in numeri",
+    "securityTitle": "Sicurezza",
+    "securityAlt": "Sicurezza di TrayMixer",
+    "chips": [
+      "Mica · Acrylic",
+      "~2 MB di RAM",
+      "0% CPU",
+      "Senza installare",
+      "Open source"
+    ],
+    "security": [
+      "Senza diritti di amministratore (manifest asInvoker)",
+      "Niente rete: non invia e non scarica nulla",
+      "DLL di sistema solo da System32, niente DLL hijacking",
+      "Release compilate da GitHub Actions + SHA-256",
+      "Analisi del codice CodeQL a ogni modifica",
+      "Impostazioni solo in HKCU\\Software\\TrayMixer"
+    ],
+    "features": [
+      [
+        "Tutti i dispositivi",
+        "Cuffie, casse, monitor: ognuno ha il suo cursore. Un clic sul nome lo rende predefinito."
+      ],
+      [
+        "Ogni app",
+        "Browser, gioco e Discord separati, con le loro icone. Tante schede = una riga."
+      ],
+      [
+        "Windows 11 nativo",
+        "Mica o Acrylic, angoli arrotondati, tema scuro e chiaro, il tuo colore d’accento."
+      ],
+      [
+        "Niente di superfluo",
+        "Clic destro per nascondere una riga. Si ripristina dal menu della tray. Tutto viene ricordato."
+      ],
+      [
+        "Istantaneo e leggero",
+        "Ascolta gli eventi di Windows invece di interrogarlo: 0% di CPU a riposo e circa 2 MB di RAM."
+      ],
+      [
+        "Sicuro",
+        "Niente internet né diritti di amministratore. Open source, compilato su GitHub con attestazione."
+      ]
+    ],
+    "numbers": [
+      [
+        "~2 MB",
+        "di RAM a riposo"
+      ],
+      [
+        "0%",
+        "CPU, niente polling"
+      ],
+      [
+        "165 KB",
+        "un solo exe"
+      ],
+      [
+        "0",
+        "dipendenze"
+      ]
+    ],
+    "featuresHead": "Tutto l’audio — *in una finestra*",
+    "numbersChip": "In cifre",
+    "numbersHead": "Leggero come *un’app di sistema*",
+    "securityHead": "Sicuro *per progettazione*"
+  },
+  "tr": {
+    "alt": "TrayMixer — her cihazın ve uygulamanın sesi tek bir Windows 11 penceresinde",
+    "line1": "Her cihazın ve her uygulamanın sesi",
+    "line2": "Windows 11 tarzında tek bir pencerede",
+    "cta": "Windows 11 için indir",
+    "featuresTitle": "ÖZELLİKLER",
+    "featuresAlt": "TrayMixer özellikleri",
+    "numbersTitle": "SİSTEM UYGULAMASI KADAR HAFİF",
+    "numbersAlt": "Rakamlarla TrayMixer",
+    "securityTitle": "Güvenlik",
+    "securityAlt": "TrayMixer güvenliği",
+    "chips": [
+      "Mica · Acrylic",
+      "~2 MB RAM",
+      "%0 CPU",
+      "Kurulum yok",
+      "Açık kaynak"
+    ],
+    "security": [
+      "Yönetici hakkı olmadan çalışır (asInvoker manifesti)",
+      "Ağ yok: hiçbir şey göndermez ve indirmez",
+      "Sistem DLL'leri yalnızca System32'den alınır",
+      "Sürümler GitHub Actions'ta derlenir + SHA-256",
+      "Her değişiklikte CodeQL kod taraması",
+      "Ayarlar yalnızca HKCU\\Software\\TrayMixer'da"
+    ],
+    "features": [
+      [
+        "Tüm cihazlar",
+        "Kulaklık, hoparlör, monitör — her birinin kendi kaydırıcısı var. Ada tıklayınca varsayılan olur."
+      ],
+      [
+        "Her uygulama",
+        "Tarayıcı, oyun ve Discord ayrı ayrı, kendi simgeleriyle. Birçok sekme = tek satır."
+      ],
+      [
+        "Yerel Windows 11",
+        "Mica veya Acrylic, yuvarlak köşeler, koyu ve açık tema, vurgu renginiz."
+      ],
+      [
+        "Fazlası yok",
+        "Sağ tıkla satırı gizle. Tepsi menüsünden geri getir. Her şey hatırlanır."
+      ],
+      [
+        "Anında ve hafif",
+        "Sorgulamak yerine Windows olaylarını dinler: boştayken %0 CPU ve yaklaşık 2 MB RAM."
+      ],
+      [
+        "Güvenli",
+        "İnternet ve yönetici hakkı yok. Açık kaynak, kaynağı doğrulanmış GitHub derlemesi."
+      ]
+    ],
+    "numbers": [
+      [
+        "~2 MB",
+        "boştayken RAM"
+      ],
+      [
+        "%0",
+        "CPU, sorgulama yok"
+      ],
+      [
+        "165 KB",
+        "tek bir exe"
+      ],
+      [
+        "0",
+        "bağımlılık"
+      ]
+    ],
+    "featuresHead": "Tüm sesler — *tek pencerede*",
+    "numbersChip": "Rakamlarla",
+    "numbersHead": "*Sistem uygulaması* kadar hafif",
+    "securityHead": "*Tasarımı gereği* güvenli"
+  },
+  "uk": {
+    "alt": "TrayMixer — гучність кожного пристрою й застосунку в одному вікні Windows 11",
+    "line1": "Гучність кожного пристрою і застосунку",
+    "line2": "в одному вікні в стилі Windows 11",
+    "cta": "Завантажити для Windows 11",
+    "featuresTitle": "МОЖЛИВОСТІ",
+    "featuresAlt": "Можливості TrayMixer",
+    "numbersTitle": "ЛЕГКИЙ, ЯК СИСТЕМНИЙ",
+    "numbersAlt": "TrayMixer у цифрах",
+    "securityTitle": "Безпека",
+    "securityAlt": "Безпека TrayMixer",
+    "chips": [
+      "Mica · Acrylic",
+      "~2 МБ пам’яті",
+      "0% CPU",
+      "Без встановлення",
+      "Відкритий код"
+    ],
+    "security": [
+      "Працює без прав адміністратора (маніфест asInvoker)",
+      "Без мережі: нічого не надсилає й не завантажує",
+      "Системні DLL лише з System32 — захист від підміни",
+      "Релізи збирає GitHub Actions + SHA-256 та attestation",
+      "Перевірка коду CodeQL під час кожної зміни",
+      "Налаштування — лише в HKCU\\Software\\TrayMixer"
+    ],
+    "features": [
+      [
+        "Усі пристрої",
+        "Навушники, колонки, монітор — у кожного свій повзунок. Клік по назві робить його основним."
+      ],
+      [
+        "Кожен застосунок",
+        "Браузер, гра й Discord — окремо, з їхніми іконками. Кілька вкладок = один рядок."
+      ],
+      [
+        "Рідний Windows 11",
+        "Mica або Acrylic, заокруглені кути, темна і світла тема, ваш колір акценту."
+      ],
+      [
+        "Нічого зайвого",
+        "Правий клік — сховати рядок. Повернути можна в меню трею. Усе запам’ятовується."
+      ],
+      [
+        "Миттєво і легко",
+        "Слухає події Windows замість опитування: 0% CPU у простої та близько 2 МБ пам’яті."
+      ],
+      [
+        "Безпечно",
+        "Без інтернету й прав адміна. Відкритий код, збірка на GitHub із підтвердженням походження."
+      ]
+    ],
+    "numbers": [
+      [
+        "~2 МБ",
+        "пам’яті в простої"
+      ],
+      [
+        "0%",
+        "CPU без опитування"
+      ],
+      [
+        "165 КБ",
+        "один exe-файл"
+      ],
+      [
+        "0",
+        "залежностей"
+      ]
+    ],
+    "featuresHead": "Усі звуки — *в одному вікні*",
+    "numbersChip": "У цифрах",
+    "numbersHead": "Легкий, *як системний*",
+    "securityHead": "Безпечний *за задумом*"
+  },
+  "pl": {
+    "alt": "TrayMixer — głośność każdego urządzenia i aplikacji w jednym oknie Windows 11",
+    "line1": "Głośność każdego urządzenia i aplikacji",
+    "line2": "w jednym oknie w stylu Windows 11",
+    "cta": "Pobierz dla Windows 11",
+    "featuresTitle": "FUNKCJE",
+    "featuresAlt": "Funkcje TrayMixer",
+    "numbersTitle": "LEKKI JAK APLIKACJA SYSTEMOWA",
+    "numbersAlt": "TrayMixer w liczbach",
+    "securityTitle": "Bezpieczeństwo",
+    "securityAlt": "Bezpieczeństwo TrayMixer",
+    "chips": [
+      "Mica · Acrylic",
+      "~2 MB RAM",
+      "0% CPU",
+      "Bez instalacji",
+      "Otwarty kod"
+    ],
+    "security": [
+      "Działa bez praw administratora (manifest asInvoker)",
+      "Bez sieci: niczego nie wysyła ani nie pobiera",
+      "Systemowe DLL tylko z System32 — bez podmiany DLL",
+      "Wydania budowane w GitHub Actions + SHA-256",
+      "Skanowanie kodu CodeQL przy każdej zmianie",
+      "Ustawienia tylko w HKCU\\Software\\TrayMixer"
+    ],
+    "features": [
+      [
+        "Wszystkie urządzenia",
+        "Słuchawki, głośniki, monitor — każde ma własny suwak. Kliknięcie nazwy ustawia je jako domyślne."
+      ],
+      [
+        "Każda aplikacja",
+        "Przeglądarka, gra i Discord osobno, z ich ikonami. Wiele kart = jeden wiersz."
+      ],
+      [
+        "Natywny Windows 11",
+        "Mica lub Acrylic, zaokrąglone rogi, ciemny i jasny motyw, twój kolor akcentu."
+      ],
+      [
+        "Nic zbędnego",
+        "Prawy klik ukrywa wiersz. Przywrócisz go z menu w zasobniku. Wszystko jest zapamiętywane."
+      ],
+      [
+        "Szybki i lekki",
+        "Nasłuchuje zdarzeń Windows zamiast odpytywać: 0% CPU w spoczynku i około 2 MB RAM."
+      ],
+      [
+        "Bezpieczny",
+        "Bez internetu i praw administratora. Otwarty kod, budowany na GitHub z poświadczeniem pochodzenia."
+      ]
+    ],
+    "numbers": [
+      [
+        "~2 MB",
+        "RAM w spoczynku"
+      ],
+      [
+        "0%",
+        "CPU, bez odpytywania"
+      ],
+      [
+        "165 KB",
+        "jeden plik exe"
+      ],
+      [
+        "0",
+        "zależności"
+      ]
+    ],
+    "featuresHead": "Cały dźwięk — *w jednym oknie*",
+    "numbersChip": "W liczbach",
+    "numbersHead": "Lekki jak *aplikacja systemowa*",
+    "securityHead": "Bezpieczny *z założenia*"
+  }
+}

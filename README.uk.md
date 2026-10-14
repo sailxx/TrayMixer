@@ -6,7 +6,7 @@
 
 <img src="assets/readme/hero-uk.svg" width="100%" alt="TrayMixer — гучність кожного пристрою й застосунку в одному вікні Windows 11">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-uk.svg" height="44" alt="Завантажити для Windows 11"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-uk.svg" height="52" alt="Завантажити для Windows 11"></a>
 
 </div>
 
