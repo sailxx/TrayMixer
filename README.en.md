@@ -90,6 +90,7 @@ The C# compiler ships with Windows — nothing to install. `tools\readme-art.cmd
 | `TrayMixer.cs` | Window, Mica rendering, tray, settings |
 | `Audio.cs` | Windows Core Audio: devices, apps, notifications |
 | `Brightness.cs` | Screen brightness: DDC/CI for external monitors, WMI for the laptop screen |
+| `BlueLight.cs` | Blue light filter and dimming: GPU gamma ramp for all screens |
 | `app.manifest` | Runs without admin rights |
 | `tools/` | README image generator |
 

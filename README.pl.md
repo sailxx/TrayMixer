@@ -90,6 +90,7 @@ Kompilator C# jest już w Windows — nic nie trzeba instalować. Obrazki README
 | `TrayMixer.cs` | Okno, rysowanie z Mica, zasobnik, ustawienia |
 | `Audio.cs` | Windows Core Audio: urządzenia, aplikacje, powiadomienia |
 | `Brightness.cs` | Jasność ekranów: DDC/CI dla monitorów zewnętrznych, WMI dla ekranu laptopa |
+| `BlueLight.cs` | Filtr światła niebieskiego i przyciemnianie: tablica gamma karty graficznej dla wszystkich ekranów |
 | `app.manifest` | Uruchamianie bez praw administratora |
 | `tools/` | Generator obrazków README |
 

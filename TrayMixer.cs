@@ -75,7 +75,7 @@ namespace TrayMixer
     static class Glyphs
     {
         public const string Speaker = "", Headphones = "", Mute = "", Bell = "", Monitor = "", Mixer = "";
-        public const string Sun = "";
+        public const string Sun = "", Moon = "", Dim = "";
         public const string Vol0 = "", Vol1 = "", Vol2 = "", Vol3 = "";
     }
 
@@ -387,6 +387,23 @@ namespace TrayMixer
                     SetVol = v => disp.Set((int)Math.Round(v * 100))
                 });
             }
+            // Фильтр синего света и затемнение — для всех экранов сразу; клик по иконке включает и выключает
+            bool blue = !Hidden.Is("blue:filter"), dim = !Hidden.Is("blue:dim");
+            if (blue || dim) items.Add(new Item { K = Kind.Sep });
+            if (blue)
+                items.Add(new Item
+                {
+                    K = Kind.Row, Text = "Фильтр синего света", Key = "blue:filter", Glyph = Glyphs.Moon,
+                    GetVol = () => BlueLight.Strength / 100f, SetVol = v => BlueLight.SetStrength((int)Math.Round(v * 100)),
+                    GetMute = () => !BlueLight.FilterOn, SetMute = m => BlueLight.SetFilterOn(!m)
+                });
+            if (dim)
+                items.Add(new Item
+                {
+                    K = Kind.Row, Text = "Затемнение", Key = "blue:dim", Glyph = Glyphs.Dim,
+                    GetVol = () => BlueLight.Dim / 100f, SetVol = v => BlueLight.SetDim((int)Math.Round(v * 100)),
+                    GetMute = () => !BlueLight.DimOn, SetMute = m => BlueLight.SetDimOn(!m)
+                });
             items.Add(new Item { K = Kind.Footer, Text = "Громкость" });
 
             int y = S(6);
@@ -738,7 +755,7 @@ namespace TrayMixer
                 new MenuItem("-"), hiddenItem,
                 new MenuItem("-"), micaItem, acrylicItem,
                 new MenuItem("-"), autoItem,
-                new MenuItem("Выход", delegate { icon.Visible = false; Application.Exit(); })
+                new MenuItem("Выход", delegate { icon.Visible = false; BlueLight.Reset(); Application.Exit(); })
             });
             icon.MouseClick += OnTrayClick;
             UpdateChecks();
@@ -751,6 +768,7 @@ namespace TrayMixer
             try { Audio.En.RegisterEndpointNotificationCallback(notifier); } catch { }
             Rebind();
             Brightness.ScanAsync(null); // прогреть список экранов к первому открытию
+            BlueLight.Start();          // вернуть фильтр синего света и затемнение с прошлого запуска
             icon.Visible = true;
             Native.Trim();
         }

@@ -90,6 +90,7 @@ Der C#-Compiler ist in Windows bereits enthalten — es muss nichts installiert 
 | `TrayMixer.cs` | Fenster, Darstellung mit Mica, Tray, Einstellungen |
 | `Audio.cs` | Windows Core Audio: Geräte, Apps, Benachrichtigungen |
 | `Brightness.cs` | Bildschirmhelligkeit: DDC/CI für externe Monitore, WMI für den Laptop-Bildschirm |
+| `BlueLight.cs` | Blaulichtfilter und Abdunkeln: Gamma-Tabelle der Grafikkarte für alle Bildschirme |
 | `app.manifest` | Start ohne Adminrechte |
 | `tools/` | Generator der README-Bilder |
 

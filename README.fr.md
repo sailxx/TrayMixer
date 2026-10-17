@@ -90,6 +90,7 @@ Le compilateur C# est déjà fourni avec Windows — rien à installer. Les imag
 | `TrayMixer.cs` | Fenêtre, rendu avec Mica, barre des tâches, réglages |
 | `Audio.cs` | Windows Core Audio : appareils, applications, notifications |
 | `Brightness.cs` | Luminosité de l’écran : DDC/CI pour les écrans externes, WMI pour l’écran du portable |
+| `BlueLight.cs` | Filtre de lumière bleue et assombrissement : table gamma du GPU pour tous les écrans |
 | `app.manifest` | Lancement sans droits administrateur |
 | `tools/` | Générateur des images du README |
 
