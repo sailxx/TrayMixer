@@ -90,6 +90,7 @@ C# derleyicisi Windows'ta zaten var — hiçbir şey kurmanız gerekmez. README 
 | `TrayMixer.cs` | Pencere, Mica ile çizim, tepsi, ayarlar |
 | `Audio.cs` | Windows Core Audio: cihazlar, uygulamalar, bildirimler |
 | `Brightness.cs` | Ekran parlaklığı: harici monitörler için DDC/CI, dizüstü ekranı için WMI |
+| `BlueLight.cs` | Mavi ışık filtresi ve karartma: tüm ekranlar için ekran kartı gama tablosu |
 | `app.manifest` | Yönetici hakkı olmadan çalıştırma |
 | `tools/` | README görsel oluşturucusu |
 
