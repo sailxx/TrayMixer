@@ -68,32 +68,3 @@ Get-FileHash .\TrayMixer.exe -Algorithm SHA256
 
 1. Завантажте [`TrayMixer.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe) і покладіть у постійну папку, наприклад `%LOCALAPPDATA%\TrayMixer`.
 2. Запустіть. Значок з’явиться в треї, автозапуск увімкнеться сам (вимикається в меню).
-
-Потрібна Windows 10 або 11 — .NET Framework 4.8 уже вбудований у систему. Mica й заокруглені кути — у Windows 11.
-
-> Windows SmartScreen може попередити про невідомого видавця: файл не підписано платним сертифікатом. Натисніть «Докладніше → Усе одно запустити» або зберіть програму самі.
-
-## Збірка з вихідного коду
-
-```bash
-git clone https://github.com/sailxx/TrayMixer.git
-```
-
-```bash
-TrayMixer\build.cmd
-```
-
-Компілятор C# уже є у Windows — нічого встановлювати не потрібно. Картинки для README перезбирає `tools\readme-art.cmd`.
-
-| Файл | Що всередині |
-|---|---|
-| `TrayMixer.cs` | Вікно, малювання з Mica, трей, налаштування |
-| `Audio.cs` | Windows Core Audio: пристрої, застосунки, сповіщення |
-| `Brightness.cs` | Яскравість екранів: DDC/CI для зовнішніх моніторів, WMI для екрана ноутбука |
-| `BlueLight.cs` | Фільтр синього світла та затемнення: гамма-таблиця відеокарти для всіх екранів |
-| `app.manifest` | Запуск без прав адміністратора |
-| `tools/` | Генератор картинок README |
-
-## Ліцензія
-
-[MIT](LICENSE) © sailxx

@@ -68,32 +68,3 @@ Get-FileHash .\TrayMixer.exe -Algorithm SHA256
 
 1. Lade [`TrayMixer.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe) herunter und lege sie in einen festen Ordner, z. B. `%LOCALAPPDATA%\TrayMixer`.
 2. Starte sie. Das Symbol erscheint im Tray, der Autostart schaltet sich selbst ein (abschaltbar im Menü).
-
-Benötigt Windows 10 oder 11 — .NET Framework 4.8 ist bereits im System enthalten. Mica und abgerundete Ecken gibt es unter Windows 11.
-
-> Windows SmartScreen warnt eventuell vor einem unbekannten Herausgeber, weil die Datei nicht mit einem kostenpflichtigen Zertifikat signiert ist. Klicke auf „Weitere Informationen → Trotzdem ausführen“ oder baue das Programm selbst.
-
-## Aus dem Quellcode bauen
-
-```bash
-git clone https://github.com/sailxx/TrayMixer.git
-```
-
-```bash
-TrayMixer\build.cmd
-```
-
-Der C#-Compiler ist in Windows bereits enthalten — es muss nichts installiert werden. Die README-Bilder erzeugt `tools\readme-art.cmd` neu.
-
-| Datei | Inhalt |
-|---|---|
-| `TrayMixer.cs` | Fenster, Darstellung mit Mica, Tray, Einstellungen |
-| `Audio.cs` | Windows Core Audio: Geräte, Apps, Benachrichtigungen |
-| `Brightness.cs` | Bildschirmhelligkeit: DDC/CI für externe Monitore, WMI für den Laptop-Bildschirm |
-| `BlueLight.cs` | Blaulichtfilter und Abdunkeln: Gamma-Tabelle der Grafikkarte für alle Bildschirme |
-| `app.manifest` | Start ohne Adminrechte |
-| `tools/` | Generator der README-Bilder |
-
-## Lizenz
-
-[MIT](LICENSE) © sailxx

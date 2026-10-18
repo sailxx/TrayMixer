@@ -68,32 +68,3 @@ Get-FileHash .\TrayMixer.exe -Algorithm SHA256
 
 1. [`TrayMixer.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe) dosyasını indirin ve kalıcı bir klasöre koyun, örneğin `%LOCALAPPDATA%\TrayMixer`.
 2. Çalıştırın. Simge tepside görünür ve otomatik başlatma kendiliğinden açılır (menüden kapatılabilir).
-
-Windows 10 veya 11 gerekir — .NET Framework 4.8 sistemde zaten var. Mica ve yuvarlak köşeler Windows 11'de çalışır.
-
-> Windows SmartScreen bilinmeyen yayıncı uyarısı verebilir, çünkü dosya ücretli bir sertifikayla imzalanmamıştır. "Ek bilgi → Yine de çalıştır"a tıklayın ya da programı kendiniz derleyin.
-
-## Kaynak koddan derleme
-
-```bash
-git clone https://github.com/sailxx/TrayMixer.git
-```
-
-```bash
-TrayMixer\build.cmd
-```
-
-C# derleyicisi Windows'ta zaten var — hiçbir şey kurmanız gerekmez. README görsellerini `tools\readme-art.cmd` yeniden oluşturur.
-
-| Dosya | İçerik |
-|---|---|
-| `TrayMixer.cs` | Pencere, Mica ile çizim, tepsi, ayarlar |
-| `Audio.cs` | Windows Core Audio: cihazlar, uygulamalar, bildirimler |
-| `Brightness.cs` | Ekran parlaklığı: harici monitörler için DDC/CI, dizüstü ekranı için WMI |
-| `BlueLight.cs` | Mavi ışık filtresi ve karartma: tüm ekranlar için ekran kartı gama tablosu |
-| `app.manifest` | Yönetici hakkı olmadan çalıştırma |
-| `tools/` | README görsel oluşturucusu |
-
-## Lisans
-
-[MIT](LICENSE) © sailxx
