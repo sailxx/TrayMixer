@@ -27,7 +27,7 @@ namespace TrayMixer
     class Theme
     {
         public bool Light;
-        public Color Fg, Sub, Track, ThumbOuter, ThumbBorder, Hover, Sep, Accent, Badge, Footer;
+        public Color Fg, Sub, Track, ThumbOuter, ThumbBorder, Hover, Sep, Accent, Badge, Footer, Tint;
         public static readonly string FontName = Pick("Inter", "Segoe UI");
         public static readonly string FontSemi = Pick("Segoe UI Variable Text Semibold", "Segoe UI Semibold");
         public static readonly string GlyphName = Pick("Segoe Fluent Icons", "Segoe MDL2 Assets");
@@ -43,11 +43,13 @@ namespace TrayMixer
             {
                 t.Fg = C(0xE4000000); t.Sub = C(0x9E000000); t.Track = C(0x72000000); t.ThumbOuter = C(0xFFFFFFFF);
                 t.ThumbBorder = C(0x29000000); t.Hover = C(0x0F000000); t.Sep = C(0x14000000); t.Badge = C(0xFFF3F3F3); t.Footer = C(0x0C000000);
+                t.Tint = C(0xA0F9F9F9);
             }
             else
             {
                 t.Fg = C(0xFFFFFFFF); t.Sub = C(0xC5FFFFFF); t.Track = C(0x8BFFFFFF); t.ThumbOuter = C(0xFF454545);
                 t.ThumbBorder = C(0x18FFFFFF); t.Hover = C(0x15FFFFFF); t.Sep = C(0x18FFFFFF); t.Badge = C(0xFF2C2C2C); t.Footer = C(0x40000000);
+                t.Tint = C(0xC8202020);
             }
             t.Accent = t.Light ? Color.FromArgb(0, 95, 184) : Color.FromArgb(76, 194, 255);
             try
@@ -478,7 +480,8 @@ namespace TrayMixer
 
         void Render(Graphics g)
         {
-            g.Clear(Color.Transparent);
+            // Acrylic у DWM выходит светло-серым и плоским — тонируем, как флайауты Windows 11
+            g.Clear(backdrop == Acrylic ? T.Tint : Color.Transparent);
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
