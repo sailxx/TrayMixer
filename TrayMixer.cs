@@ -63,7 +63,6 @@ namespace TrayMixer
         }
 
         public bool SameAs(Theme o) { return o.Light == Light && o.Accent == Accent; }
-        public static bool TaskbarLight() { return RegInt(Personalize, "SystemUsesLightTheme", 0) == 1; }
 
         public static int RegInt(string path, string name, int def)
         {
@@ -82,35 +81,40 @@ namespace TrayMixer
     // ───────────────────────── Значок: три вертикальных фейдера ─────────────────────────
     static class Art
     {
-        public static readonly Color Red = Color.FromArgb(255, 69, 58);
+        public static readonly Color Blue = Color.FromArgb(0, 103, 192);
 
-        // Логотип: три горизонтальных слайдера Windows 11 — красный уровень и круглая ручка.
-        // c — цвет дорожки и ручек (белый или чёрный под тему панели задач), его прозрачность приглушает весь значок.
+        // Логотип: белая плитка Mica (как окно Windows 11) с двумя ползунками — громкость и яркость.
+        // Плитка одинаково видна на светлой и тёмной панели задач; dim — звук выключен: уровни серые, значок бледнее.
         // На малых размерах всё выровнено по пикселям, чтобы значок в трее был чётким.
-        public static void DrawMixer(Graphics g, RectangleF r, Color c)
+        public static void DrawMixer(Graphics g, RectangleF r, bool dim = false)
         {
             int n = (int)Math.Min(r.Width, r.Height);
             var oldSm = g.SmoothingMode; var oldPo = g.PixelOffsetMode;
             g.SmoothingMode = SmoothingMode.AntiAlias; g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            int th = Math.Max(2, (int)Math.Round(n * 0.07));          // толщина дорожки
-            int kr = Math.Max(2, (int)Math.Round(n * 0.11));          // радиус ручки
-            int pad = Math.Max(1, (int)Math.Round(n * 0.08));         // поля слева и справа
-            float x0 = r.X + pad, x1 = r.X + n - pad;
-            float[] rows = { 0.22f, 0.5f, 0.78f }, lv = { 0.72f, 0.3f, 0.55f };
-            var red = Color.FromArgb(c.A, Red);
-            using (var track = new SolidBrush(Color.FromArgb(c.A * 40 / 100, c)))
-            using (var fill = new SolidBrush(red))
-            using (var knob = new SolidBrush(c))
-                for (int i = 0; i < 3; i++)
+            int a = dim ? 170 : 255;
+            int pad = Math.Max(1, (int)Math.Round(n * 0.07));         // поля вокруг плитки
+            float bw = Math.Max(1f, n * 0.025f);                      // толщина кромки
+            var tile = new RectangleF(r.X + pad + bw / 2, r.Y + pad + bw / 2, n - 2 * pad - bw, n - 2 * pad - bw);
+            using (var p = RoundRect(tile, n * 0.22f))
+            using (var bg = new LinearGradientBrush(RectangleF.Inflate(tile, 1, 1), Color.FromArgb(a, 255, 255, 255), Color.FromArgb(a, 230, 233, 237), 90f))
+            using (var eb = new LinearGradientBrush(RectangleF.Inflate(tile, 1, 1), Color.FromArgb(a * 8 / 100, 0, 0, 0), Color.FromArgb(a * 22 / 100, 0, 0, 0), 90f))
+            using (var edge = new Pen(eb, bw))
+            { g.FillPath(bg, p); g.DrawPath(edge, p); }
+            int th = Math.Max(2, (int)Math.Round(n * 0.083));         // толщина дорожки
+            int kr = Math.Max(2, (int)Math.Round(n * 0.104));         // радиус ручки
+            float x0 = r.X + (float)Math.Round(n * 0.25), x1 = r.X + (float)Math.Round(n * 0.75);
+            float[] rows = { 0.375f, 0.625f }, kxs = { 0.604f, 0.417f };
+            using (var track = new SolidBrush(Color.FromArgb(a * 15 / 100, 0, 0, 0)))
+            using (var fill = new SolidBrush(dim ? Color.FromArgb(a, 150, 155, 160) : Color.FromArgb(a, Blue)))
+            using (var knob = new SolidBrush(Color.FromArgb(a, 26, 26, 26)))
+                for (int i = 0; i < 2; i++)
                 {
                     float cy = r.Y + (float)Math.Round(n * rows[i]);
-                    float kx = (float)Math.Round(x0 + kr + (x1 - x0 - 2 * kr) * lv[i]);
+                    float kx = r.X + (float)Math.Round(n * kxs[i]);
                     var tr = new RectangleF(x0, cy - th / 2f, x1 - x0, th);
                     using (var p = RoundRect(tr, th / 2f)) g.FillPath(track, p);
                     using (var p = RoundRect(new RectangleF(x0, tr.Y, kx - x0, th), th / 2f)) g.FillPath(fill, p);
                     g.FillEllipse(knob, kx - kr, cy - kr, kr * 2, kr * 2);
-                    float ir = kr * 0.45f;                            // красная серединка ручки, если есть место
-                    if (kr >= 4) g.FillEllipse(fill, kx - ir, cy - ir, ir * 2, ir * 2);
                 }
             g.SmoothingMode = oldSm; g.PixelOffsetMode = oldPo;
         }
@@ -131,7 +135,7 @@ namespace TrayMixer
             foreach (int n in sizes)
                 using (var bmp = new Bitmap(n, n, PixelFormat.Format32bppArgb))
                 {
-                    using (var g = Graphics.FromImage(bmp)) DrawMixer(g, new RectangleF(0, 0, n, n), Color.White);
+                    using (var g = Graphics.FromImage(bmp)) DrawMixer(g, new RectangleF(0, 0, n, n));
                     using (var ms = new System.IO.MemoryStream())
                     {
                         if (n >= 256) bmp.Save(ms, ImageFormat.Png);
@@ -734,7 +738,7 @@ namespace TrayMixer
         readonly Popup popup;
         readonly Notifier notifier;
         IAudioEndpointVolume defVol;
-        string lastGlyph; bool lastLight;
+        string lastGlyph;
         readonly MenuItem autoItem, micaItem, acrylicItem;
 
         public TrayApp(float scale)
@@ -832,22 +836,21 @@ namespace TrayMixer
                 }
             }
             catch { }
-            bool light = Theme.TaskbarLight();
-            if (glyph != lastGlyph || light != lastLight)
+            if (glyph != lastGlyph)
             {
-                var old = icon.Icon; icon.Icon = MakeIcon(glyph == "off", light); if (old != null) old.Dispose();
-                lastGlyph = glyph; lastLight = light;
+                var old = icon.Icon; icon.Icon = MakeIcon(glyph == "off"); if (old != null) old.Dispose();
+                lastGlyph = glyph;
             }
             icon.Text = text;
         }
 
-        static Icon MakeIcon(bool dim, bool light)
+        static Icon MakeIcon(bool dim)
         {
             int sz = SystemInformation.SmallIconSize.Width;
             using (var bmp = new Bitmap(sz, sz))
             {
                 using (var g = Graphics.FromImage(bmp))
-                    Art.DrawMixer(g, new RectangleF(0, 0, sz, sz), Color.FromArgb(dim ? 110 : 255, light ? Color.Black : Color.White));
+                    Art.DrawMixer(g, new RectangleF(0, 0, sz, sz), dim);
                 IntPtr h = bmp.GetHicon();
                 var ic = (Icon)Icon.FromHandle(h).Clone(); Native.DestroyIcon(h); return ic;
             }

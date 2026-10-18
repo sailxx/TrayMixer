@@ -21,15 +21,17 @@ const K = createKit({
 });
 const { P, T, card, chip, sectionHead, iconBox, lines, wrap, one, fitSize, fitText, delay, svg } = K;
 
-// Логотип — геометрия значка программы: три ползунка
-function mixer(x, y, n, level = B) {
-  let s = '';
-  const th = n * 0.07, kr = n * 0.11, x0 = x + n * 0.08, x1 = x + n * 0.92;
-  [[0.22, 0.72], [0.5, 0.3], [0.78, 0.55]].forEach(([row, lv]) => {
-    const cy = y + n * row, kx = x0 + kr + (x1 - x0 - 2 * kr) * lv;
-    s += `<rect x="${x0}" y="${cy - th / 2}" width="${x1 - x0}" height="${th}" rx="${th / 2}" fill="#fff" fill-opacity=".35"/>` +
-      `<rect x="${x0}" y="${cy - th / 2}" width="${kx - x0}" height="${th}" rx="${th / 2}" fill="${level}"/>` +
-      `<circle cx="${kx}" cy="${cy}" r="${kr}" fill="#fff"/><circle cx="${kx}" cy="${cy}" r="${kr * 0.45}" fill="${level}"/>`;
+// Логотип — геометрия значка программы: белая плитка Mica с двумя ползунками
+let mixId = 0;
+function mixer(x, y, n) {
+  const id = 'mx' + mixId++, u = v => n * v / 24, bw = Math.max(1, u(0.6)), p = u(1.7) + bw / 2, w = n - 2 * p;
+  let s = `<defs><linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#E6E9ED"/></linearGradient>` +
+    `<linearGradient id="${id}e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-opacity=".08"/><stop offset="1" stop-opacity=".22"/></linearGradient></defs>` +
+    `<rect x="${x + p}" y="${y + p}" width="${w}" height="${w}" rx="${u(5.3)}" fill="url(#${id}f)" stroke="url(#${id}e)" stroke-width="${bw}"/>`;
+  [[9, 14.5], [15, 10]].forEach(([cy, kx]) => {
+    s += `<rect x="${x + u(6)}" y="${y + u(cy - 1)}" width="${u(12)}" height="${u(2)}" rx="${u(1)}" fill="#000" fill-opacity=".15"/>` +
+      `<rect x="${x + u(6)}" y="${y + u(cy - 1)}" width="${u(kx - 6)}" height="${u(2)}" rx="${u(1)}" fill="#0067C0"/>` +
+      `<circle cx="${x + u(kx)}" cy="${y + u(cy)}" r="${u(2.5)}" fill="#1A1A1A"/>`;
   });
   return s;
 }
@@ -65,7 +67,7 @@ const PULSE = '.pulse2{animation:k 2.4s ease-in-out infinite;transform-box:fill-
 // ---------- HERO ----------
 function hero(l) {
   const W = 880;
-  let b = `<g class="r"><rect x="40" y="36" width="36" height="36" rx="10" fill="#0E0E0E" stroke="#3a3a3a"/>${mixer(42, 38, 32)}
+  let b = `<g class="r">${mixer(38, 34, 40)}
 <text x="88" y="62" font-size="24" font-weight="800" letter-spacing="-.4">${T('TrayMixer')}</text></g>`;
   b += `<g class="r" ${delay(1)}>${chip(232, 39, 'v' + VERSION).s}</g>`;
   const ts = 34;
