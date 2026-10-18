@@ -10,13 +10,6 @@
     "numbersAlt": "TrayMixer в цифрах",
     "securityTitle": "Безопасность",
     "securityAlt": "Безопасность TrayMixer",
-    "chips": [
-      "Mica · Acrylic",
-      "~2 МБ памяти",
-      "0% CPU",
-      "Без установки",
-      "Открытый код"
-    ],
     "security": [
       "Работает без прав администратора (манифест asInvoker)",
       "Нет сети: не отправляет и не скачивает ничего",
@@ -85,13 +78,6 @@
     "numbersAlt": "TrayMixer by the numbers",
     "securityTitle": "Security",
     "securityAlt": "TrayMixer security",
-    "chips": [
-      "Mica · Acrylic",
-      "~2 MB RAM",
-      "0% CPU",
-      "No install",
-      "Open source"
-    ],
     "security": [
       "Runs without admin rights (asInvoker manifest)",
       "No network: never sends or downloads anything",
@@ -160,13 +146,6 @@
     "numbersAlt": "TrayMixer en cifras",
     "securityTitle": "Seguridad",
     "securityAlt": "Seguridad de TrayMixer",
-    "chips": [
-      "Mica · Acrylic",
-      "~2 MB de RAM",
-      "0% CPU",
-      "Sin instalar",
-      "Código abierto"
-    ],
     "security": [
       "Sin permisos de administrador (manifiesto asInvoker)",
       "Sin red: no envía ni descarga nada",
@@ -235,13 +214,6 @@
     "numbersAlt": "TrayMixer em números",
     "securityTitle": "Segurança",
     "securityAlt": "Segurança do TrayMixer",
-    "chips": [
-      "Mica · Acrylic",
-      "~2 MB de RAM",
-      "0% CPU",
-      "Sem instalar",
-      "Código aberto"
-    ],
     "security": [
       "Sem direitos de administrador (manifesto asInvoker)",
       "Sem rede: não envia nem baixa nada",
@@ -310,13 +282,6 @@
     "numbersAlt": "TrayMixer in Zahlen",
     "securityTitle": "Sicherheit",
     "securityAlt": "Sicherheit von TrayMixer",
-    "chips": [
-      "Mica · Acrylic",
-      "~2 MB RAM",
-      "0% CPU",
-      "Ohne Installation",
-      "Open Source"
-    ],
     "security": [
       "Läuft ohne Adminrechte (Manifest asInvoker)",
       "Kein Netzwerk: sendet und lädt nichts",
@@ -385,13 +350,6 @@
     "numbersAlt": "TrayMixer en chiffres",
     "securityTitle": "Sécurité",
     "securityAlt": "Sécurité de TrayMixer",
-    "chips": [
-      "Mica · Acrylic",
-      "~2 Mo de RAM",
-      "0 % CPU",
-      "Sans installation",
-      "Open source"
-    ],
     "security": [
       "Sans droits administrateur (manifeste asInvoker)",
       "Aucun réseau : n’envoie et ne télécharge rien",
@@ -460,13 +418,6 @@
     "numbersAlt": "TrayMixer in numeri",
     "securityTitle": "Sicurezza",
     "securityAlt": "Sicurezza di TrayMixer",
-    "chips": [
-      "Mica · Acrylic",
-      "~2 MB di RAM",
-      "0% CPU",
-      "Senza installare",
-      "Open source"
-    ],
     "security": [
       "Senza diritti di amministratore (manifest asInvoker)",
       "Niente rete: non invia e non scarica nulla",
@@ -535,13 +486,6 @@
     "numbersAlt": "Rakamlarla TrayMixer",
     "securityTitle": "Güvenlik",
     "securityAlt": "TrayMixer güvenliği",
-    "chips": [
-      "Mica · Acrylic",
-      "~2 MB RAM",
-      "%0 CPU",
-      "Kurulum yok",
-      "Açık kaynak"
-    ],
     "security": [
       "Yönetici hakkı olmadan çalışır (asInvoker manifesti)",
       "Ağ yok: hiçbir şey göndermez ve indirmez",
@@ -610,13 +554,6 @@
     "numbersAlt": "TrayMixer у цифрах",
     "securityTitle": "Безпека",
     "securityAlt": "Безпека TrayMixer",
-    "chips": [
-      "Mica · Acrylic",
-      "~2 МБ пам’яті",
-      "0% CPU",
-      "Без встановлення",
-      "Відкритий код"
-    ],
     "security": [
       "Працює без прав адміністратора (маніфест asInvoker)",
       "Без мережі: нічого не надсилає й не завантажує",
@@ -685,13 +622,6 @@
     "numbersAlt": "TrayMixer w liczbach",
     "securityTitle": "Bezpieczeństwo",
     "securityAlt": "Bezpieczeństwo TrayMixer",
-    "chips": [
-      "Mica · Acrylic",
-      "~2 MB RAM",
-      "0% CPU",
-      "Bez instalacji",
-      "Otwarty kod"
-    ],
     "security": [
       "Działa bez praw administratora (manifest asInvoker)",
       "Bez sieci: niczego nie wysyła ani nie pobiera",

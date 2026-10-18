@@ -74,16 +74,8 @@ function hero(l) {
   const t1 = wrap(l.line1, 470, ts, 800), t2 = wrap('*' + l.line2 + '*', 470, ts, 800);
   const all = [...t1, ...t2];
   b += `<g class="r" ${delay(2)}>${lines(40, 140, all, { size: ts, weight: 800, lh: ts * 1.22, spacing: '-.8' })}</g>`;
-  let y = 140 + (all.length - 1) * ts * 1.22 + 46;
-  // чипы-свойства, переносятся в несколько рядов
-  let cx = 40;
-  l.chips.forEach((c, i) => {
-    const w = chip(0, 0, c, { upper: false }).w;
-    if (cx + w > 520) { cx = 40; y += 40; }
-    b += `<g class="r" ${delay(3 + i * 0.5)}>${chip(cx, y, c, { upper: false }).s}</g>`;
-    cx += w + 10;
-  });
-  const H = Math.max(y + 30 + 40, 380);
+  const y = 140 + (all.length - 1) * ts * 1.22;
+  const H = Math.max(y + 70, 380);
   b += `<g class="r" ${delay(3)}><ellipse cx="700" cy="${H / 2}" rx="190" ry="180" fill="url(#g1)"/>${flyout(550, (H - 300) / 2)}</g>`;
   return svg(W, H, l.alt, b + `<style>${PULSE}</style>`);
 }
