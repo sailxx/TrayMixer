@@ -68,3 +68,12 @@ Get-FileHash .\TrayMixer.exe -Algorithm SHA256
 
 1. Pobierz [`TrayMixer.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe) i umieść go w stałym folderze, np. `%LOCALAPPDATA%\TrayMixer`.
 2. Uruchom go. Ikona pojawi się w zasobniku, a autostart włączy się sam (można go wyłączyć w menu).
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+- **What is signed:** only the official `TrayMixer.exe` that GitHub Actions builds from this repository when a `v*` tag is pushed (see `.github/workflows/release.yml`). Builds from forks, branches or local machines are never signed.
+- **Team roles:** committer, reviewer and approver of every signing request — [@sailxx](https://github.com/sailxx). Two-factor authentication is required for the GitHub and SignPath accounts.
+- **Privacy:** this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+- **Verification:** besides the signature, every release carries a SHA-256 file and a GitHub build provenance attestation (`gh attestation verify TrayMixer.exe --repo sailxx/TrayMixer`).
