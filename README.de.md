@@ -1,0 +1,79 @@
+<div align="center">
+
+[Русский](README.ru.md) · [English](README.md) · [Español](README.es.md) · [Português](README.pt.md) · **Deutsch** · [Français](README.fr.md) · [Italiano](README.it.md) · [Türkçe](README.tr.md) · [Українська](README.uk.md) · [Polski](README.pl.md)
+
+<br>
+
+<img src="assets/readme/hero-de.svg" width="100%" alt="TrayMixer — Lautstärke jedes Geräts und jeder App in einem Windows-11-Fenster">
+
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-de.svg" height="52" alt="Für Windows 11 herunterladen"></a>
+
+</div>
+
+<br>
+
+<img src="assets/readme/screenshot.png" width="100%" alt="TrayMixer-Fenster: Kopfhörer, Lautsprecher, Browser und Systemklänge auf einen Blick">
+
+Der Lautstärkemixer von Windows 11 ist in den Einstellungen versteckt, und das Lautstärkesymbol in der Taskleiste steuert nur ein Gerät. **TrayMixer** ist einen Klick entfernt: alle Kopfhörer, Lautsprecher, Monitore und jede App mit eigenem Regler. Ohne Installation, ohne Werbung, ohne Hintergrundlast.
+
+<br>
+
+<img src="assets/readme/features-de.svg" width="100%" alt="Funktionen: alle Geräte, jede App, echtes Windows 11, Ausblenden, leicht, sicher">
+
+<details>
+<summary><b>Bedienung</b></summary>
+
+| Aktion | Ergebnis |
+|---|---|
+| **Linksklick** auf das Tray-Symbol | Fenster öffnen oder schließen |
+| **Mittelklick** auf das Symbol | Standardgerät stumm schalten oder wieder einschalten |
+| **Rechtsklick** auf das Symbol | Soundeinstellungen, Windows-Mixer, ausgeblendete Zeilen, Mica/Acrylic, Autostart, Beenden |
+| Klick auf das **Zeilensymbol** | Stumm schalten oder wieder einschalten |
+| Klick auf den **Gerätenamen** | Als Standardgerät festlegen |
+| **Rechtsklick** auf eine Zeile | Zeile ausblenden |
+| **Mausrad** über einer Zeile | Lautstärke oder Helligkeit ±2 |
+| **Esc** oder Klick außerhalb | Schließen |
+
+</details>
+
+> [!NOTE]
+> Die Oberfläche von TrayMixer ist auf Russisch.
+
+<br>
+
+<img src="assets/readme/numbers-de.svg" width="100%" alt="~2 MB RAM, 0% CPU, 165 KB, 0 Abhängigkeiten">
+
+<br>
+
+<img src="assets/readme/security-de.svg" width="100%" alt="Sicherheit: keine Adminrechte, kein Netzwerk, Schutz vor DLL-Hijacking, überprüfbare Builds">
+
+<details>
+<summary><b>So prüfst du, dass die exe aus diesem Code gebaut wurde</b></summary>
+
+Jedes Release baut GitHub Actions direkt aus dem Quellcode, und GitHub signiert die Herkunft der Datei (Build Provenance):
+
+```bash
+gh attestation verify TrayMixer.exe --repo sailxx/TrayMixer
+```
+
+Die SHA-256-Prüfsumme liegt in jedem Release neben der exe (`TrayMixer.exe.sha256`):
+
+```powershell
+Get-FileHash .\TrayMixer.exe -Algorithm SHA256
+```
+
+</details>
+
+## Installation
+
+1. Lade [`TrayMixer.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe) herunter und lege sie in einen festen Ordner, z. B. `%LOCALAPPDATA%\TrayMixer`.
+2. Starte sie. Das Symbol erscheint im Tray, der Autostart schaltet sich selbst ein (abschaltbar im Menü).
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+- **What is signed:** only the official `TrayMixer.exe` that GitHub Actions builds from this repository when a `v*` tag is pushed (see `.github/workflows/release.yml`). Builds from forks, branches or local machines are never signed.
+- **Team roles:** committer, reviewer and approver of every signing request — [@sailxx](https://github.com/sailxx). Two-factor authentication is required for the GitHub and SignPath accounts.
+- **Privacy:** this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+- **Verification:** besides the signature, every release carries a SHA-256 file and a GitHub build provenance attestation (`gh attestation verify TrayMixer.exe --repo sailxx/TrayMixer`).

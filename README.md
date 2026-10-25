@@ -1,5 +1,9 @@
 <div align="center">
 
+[Русский](README.ru.md) · **English** · [Español](README.es.md) · [Português](README.pt.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Italiano](README.it.md) · [Türkçe](README.tr.md) · [Українська](README.uk.md) · [Polski](README.pl.md)
+
+<br>
+
 <img src="assets/readme/hero-en.svg" width="100%" alt="TrayMixer — volume for every device and app in one Windows 11 flyout">
 
 <a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-en.svg" height="52" alt="Download for Windows 11"></a>
