@@ -264,7 +264,7 @@ namespace TrayMixer
                     if (!map.TryGetValue(key, out a))
                     {
                         a = new AppInfo { Key = key, IsSystem = sys };
-                        if (sys) a.Name = "Системные звуки";
+                        if (sys) a.Name = TrayMixer.Loc.En ? "System sounds" : "Системные звуки";
                         else
                         {
                             string dn; s.GetDisplayName(out dn);

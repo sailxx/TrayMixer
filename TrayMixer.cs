@@ -219,6 +219,8 @@ namespace TrayMixer
     // ───────────────────────── Элементы окна ─────────────────────────
     enum Kind { Sep, Note, Row, Footer }
 
+    static class Loc { public static bool En; } // только для скриншота README: --render файл.png en
+
     class Item
     {
         public Kind K; public string Text, Key; public int Y, H;
@@ -395,18 +397,18 @@ namespace TrayMixer
             if (blue)
                 items.Add(new Item
                 {
-                    K = Kind.Row, Text = "Фильтр синего света", Key = "blue:filter", Glyph = Glyphs.Moon,
+                    K = Kind.Row, Text = Loc.En ? "Blue light filter" : "Фильтр синего света", Key = "blue:filter", Glyph = Glyphs.Moon,
                     GetVol = () => BlueLight.Strength / 100f, SetVol = v => BlueLight.SetStrength((int)Math.Round(v * 100)),
                     GetMute = () => !BlueLight.FilterOn, SetMute = m => BlueLight.SetFilterOn(!m)
                 });
             if (dim)
                 items.Add(new Item
                 {
-                    K = Kind.Row, Text = "Затемнение", Key = "blue:dim", Glyph = Glyphs.Dim,
+                    K = Kind.Row, Text = Loc.En ? "Dimming" : "Затемнение", Key = "blue:dim", Glyph = Glyphs.Dim,
                     GetVol = () => BlueLight.Dim / 100f, SetVol = v => BlueLight.SetDim((int)Math.Round(v * 100)),
                     GetMute = () => !BlueLight.DimOn, SetMute = m => BlueLight.SetDimOn(!m)
                 });
-            items.Add(new Item { K = Kind.Footer, Text = "Громкость" });
+            items.Add(new Item { K = Kind.Footer, Text = Loc.En ? "Volume" : "Громкость" });
 
             int y = S(6);
             foreach (var it in items)
@@ -885,6 +887,7 @@ namespace TrayMixer
             Native.SetProcessDPIAware();
             float scale; using (var g = Graphics.FromHwnd(IntPtr.Zero)) scale = g.DpiX / 96f;
             if (args.Length > 1 && args[0] == "--make-icon" && args[1].EndsWith(".ico", StringComparison.OrdinalIgnoreCase)) { Art.WriteIco(args[1]); return; }
+            if (args.Length > 2 && args[2] == "en") Loc.En = true; // скриншот для README на английском
             if (args.Length > 1 && args[0] == "--render" && args[1].EndsWith(".png", StringComparison.OrdinalIgnoreCase)) { var p = new Popup(Popup.Mica, scale); p.CreateControl(); p.RenderTo(args[1], Color.FromArgb(32, 32, 32)); return; }
             bool created;
             using (new Mutex(true, @"Local\TrayMixer_7c1f3e2a-5b0d-4f9e-9a61-2d8c4b7e1a90", out created))
