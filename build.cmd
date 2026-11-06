@@ -6,4 +6,6 @@ if not exist TrayMixer.ico (
   %CSC% /out:TrayMixer.exe TrayMixer.cs Audio.cs Brightness.cs BlueLight.cs || exit /b 1
   start "" /wait TrayMixer.exe --make-icon TrayMixer.ico
 )
-%CSC% /out:TrayMixer.exe /win32icon:TrayMixer.ico TrayMixer.cs Audio.cs Brightness.cs BlueLight.cs
+%CSC% /out:TrayMixer.exe /win32icon:TrayMixer.ico TrayMixer.cs Audio.cs Brightness.cs BlueLight.cs || exit /b 1
+rem The installer embeds the exe built above (resource name = TrayMixer.exe)
+"%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:winexe /platform:x64 /optimize+ /debug- /win32manifest:installer\setup.manifest /win32icon:TrayMixer.ico /r:System.Windows.Forms.dll /r:System.Drawing.dll /resource:TrayMixer.exe,TrayMixer.exe /out:TrayMixer-Setup.exe installer\Setup.cs || exit /b 1
