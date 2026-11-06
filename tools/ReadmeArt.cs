@@ -1,5 +1,5 @@
-// Скриншот окна для README: настоящее окно TrayMixer на чёрном фоне с синим свечением, как у плашек.
-// Плашки (SVG) собирает tools/readme/build.mjs. Запуск обоих: tools\readme-art.cmd
+// README screenshot: the real TrayMixer window on a black background with a blue glow, like the badges.
+// The badges (SVG) are built by tools/readme/build.mjs. Run both with tools\readme-art.cmd
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -43,7 +43,7 @@ static class ReadmeArt
         }
     }
 
-    // Мягкое радиальное свечение: цвет в центре, прозрачность к краю
+    // Soft radial glow: color in the center, transparent at the edge
     static void Glow(Graphics g, Rectangle area, Color c, int alpha)
     {
         using (var path = new GraphicsPath())

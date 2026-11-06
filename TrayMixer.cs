@@ -1,6 +1,6 @@
-﻿// TrayMixer — лёгкий микшер громкости в трее для Windows 11 (Mica/Acrylic, скруглённые углы).
-// Окно рисуется вручную в одну поверхность с альфа-каналом — без WPF и дочерних контролов.
-// Сборка: build.cmd (встроенный csc .NET Framework 4.x)
+// TrayMixer: lightweight tray volume mixer for Windows 11 (Mica/Acrylic, rounded corners).
+// The window is drawn by hand onto one surface with an alpha channel, without WPF or child controls.
+// Build: build.cmd (the csc compiler built into .NET Framework 4.x)
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -18,12 +18,12 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyTitle("TrayMixer")]
 [assembly: System.Reflection.AssemblyProduct("TrayMixer")]
 [assembly: System.Reflection.AssemblyDescription("Lightweight Windows 11 tray volume mixer")]
-[assembly: System.Reflection.AssemblyVersion("2.3.1.0")]
-[assembly: System.Reflection.AssemblyFileVersion("2.3.1.0")]
+[assembly: System.Reflection.AssemblyVersion("2.4.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("2.4.0.0")]
 
 namespace TrayMixer
 {
-    // ───────────────────────── Тема ─────────────────────────
+    // ───────────────────────── Theme ─────────────────────────
     class Theme
     {
         public bool Light;
@@ -81,22 +81,22 @@ namespace TrayMixer
         public const string Vol0 = "", Vol1 = "", Vol2 = "", Vol3 = "";
     }
 
-    // ───────────────────────── Значок: три вертикальных фейдера ─────────────────────────
+    // ───────────────────────── Icon: three sliders ─────────────────────────
     static class Art
     {
         public static readonly Color Red = Color.FromArgb(255, 69, 58);
 
-        // Логотип: три горизонтальных слайдера Windows 11 — красный уровень и круглая ручка.
-        // c — цвет дорожки и ручек (белый или чёрный под тему панели задач), его прозрачность приглушает весь значок.
-        // На малых размерах всё выровнено по пикселям, чтобы значок в трее был чётким.
+        // Logo: three horizontal Windows 11 sliders with a red level and a round knob.
+        // c is the color of the track and knobs (white or black to match the taskbar theme); its alpha dims the whole icon.
+        // At small sizes everything is pixel-aligned so the tray icon stays sharp.
         public static void DrawMixer(Graphics g, RectangleF r, Color c)
         {
             int n = (int)Math.Min(r.Width, r.Height);
             var oldSm = g.SmoothingMode; var oldPo = g.PixelOffsetMode;
             g.SmoothingMode = SmoothingMode.AntiAlias; g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            int th = Math.Max(2, (int)Math.Round(n * 0.07));          // толщина дорожки
-            int kr = Math.Max(2, (int)Math.Round(n * 0.11));          // радиус ручки
-            int pad = Math.Max(1, (int)Math.Round(n * 0.08));         // поля слева и справа
+            int th = Math.Max(2, (int)Math.Round(n * 0.07));          // track thickness
+            int kr = Math.Max(2, (int)Math.Round(n * 0.11));          // knob radius
+            int pad = Math.Max(1, (int)Math.Round(n * 0.08));         // left and right padding
             float x0 = r.X + pad, x1 = r.X + n - pad;
             float[] rows = { 0.22f, 0.5f, 0.78f }, lv = { 0.72f, 0.3f, 0.55f };
             var red = Color.FromArgb(c.A, Red);
@@ -111,7 +111,7 @@ namespace TrayMixer
                     using (var p = RoundRect(tr, th / 2f)) g.FillPath(track, p);
                     using (var p = RoundRect(new RectangleF(x0, tr.Y, kx - x0, th), th / 2f)) g.FillPath(fill, p);
                     g.FillEllipse(knob, kx - kr, cy - kr, kr * 2, kr * 2);
-                    float ir = kr * 0.45f;                            // красная серединка ручки, если есть место
+                    float ir = kr * 0.45f;                            // red center of the knob, if there is room
                     if (kr >= 4) g.FillEllipse(fill, kx - ir, cy - ir, ir * 2, ir * 2);
                 }
             g.SmoothingMode = oldSm; g.PixelOffsetMode = oldPo;
@@ -125,7 +125,7 @@ namespace TrayMixer
             p.CloseFigure(); return p;
         }
 
-        // Создаёт .ico (16–256 px, PNG внутри) и превью 256 px
+        // Creates the .ico (16-256 px, PNG inside) and a 256 px preview
         public static void WriteIco(string path)
         {
             int[] sizes = { 16, 20, 24, 32, 40, 48, 64, 128, 256 };
@@ -139,7 +139,7 @@ namespace TrayMixer
                         if (n >= 256) bmp.Save(ms, ImageFormat.Png);
                         else
                         {
-                            // Классический DIB: заголовок, BGRA снизу вверх, пустая AND-маска
+                            // Classic DIB: header, BGRA bottom-up, empty AND mask
                             var bw = new System.IO.BinaryWriter(ms);
                             bw.Write(40); bw.Write(n); bw.Write(n * 2); bw.Write((short)1); bw.Write((short)32);
                             bw.Write(0); bw.Write(n * n * 4); bw.Write(0); bw.Write(0); bw.Write(0); bw.Write(0);
@@ -154,7 +154,7 @@ namespace TrayMixer
                     if (n == 256)
                         using (var prev = new Bitmap(n, n))
                         {
-                            // Превью — на чёрном фоне, сама иконка остаётся прозрачной
+                            // The preview is on a black background; the icon itself stays transparent
                             using (var g = Graphics.FromImage(prev)) { g.Clear(Color.Black); g.DrawImage(bmp, 0, 0); }
                             prev.Save(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path)), "icon-preview.png"), ImageFormat.Png);
                         }
@@ -174,9 +174,9 @@ namespace TrayMixer
         }
     }
 
-    // ───────────────────────── Гладкий текст ─────────────────────────
-    // Текст рисуется в 3 раза крупнее с честной прозрачностью и плавно уменьшается:
-    // сглаживание как у DirectWrite/macOS, без «пикселей» и поверх Mica.
+    // ───────────────────────── Smooth text ─────────────────────────
+    // The text is drawn 3 times larger with real transparency and scaled down smoothly:
+    // smoothing like DirectWrite/macOS, no pixelation, and it works on top of Mica.
     static class GdiText
     {
         const int K = 3;
@@ -216,10 +216,8 @@ namespace TrayMixer
         }
     }
 
-    // ───────────────────────── Элементы окна ─────────────────────────
+    // ───────────────────────── Window items ─────────────────────────
     enum Kind { Sep, Note, Row, Footer }
-
-    static class Loc { public static bool En; } // только для скриншота README: --render файл.png en
 
     class Item
     {
@@ -232,7 +230,7 @@ namespace TrayMixer
         public void Sync() { try { Value = (int)Math.Round(GetVol() * 100); Muted = GetMute != null && GetMute(); } catch { } }
     }
 
-    // ───────────────────────── Всплывающее окно ─────────────────────────
+    // ───────────────────────── Popup window ─────────────────────────
     class Popup : Form
     {
         public const int Mica = 2, Acrylic = 3;
@@ -242,12 +240,13 @@ namespace TrayMixer
         readonly List<Item> items = new List<Item>();
         readonly System.Windows.Forms.Timer sync = new System.Windows.Forms.Timer { Interval = 1000 };
         string signature = "";
-        Item hoverItem, dragItem; int hoverPart; // 1 — иконка, 2 — название, 3 — слайдер, 4/5 — кнопки внизу
+        Item hoverItem, dragItem; int hoverPart; // 1: icon, 2: title, 3: slider, 4/5: footer buttons
         IntPtr dib, memDC, oldBmp; Bitmap surface; int dibW, dibH;
         Font fText, fValue, fGlyph, fFootGlyph, fBadge;
         const string GearGlyph = "";
         static readonly string[] FooterUris = { "ms-settings:apps-volume", "ms-settings:sound" };
         int backdrop;
+        int wheel, ticks;   // wheel: accumulated mouse wheel delta; ticks: timer ticks since the window opened
 
         public DateTime LastHide = DateTime.MinValue;
 
@@ -262,7 +261,8 @@ namespace TrayMixer
             fGlyph = new Font(Theme.GlyphName, S(17), GraphicsUnit.Pixel);
             fFootGlyph = new Font(Theme.GlyphName, S(16), GraphicsUnit.Pixel);
             fBadge = new Font(Theme.GlyphName, S(7), GraphicsUnit.Pixel);
-            sync.Tick += delegate { RefreshContent(false); };
+            // Every tick only re-reads values; the full device and app enumeration runs on every third tick
+            sync.Tick += delegate { if (++ticks % 3 == 0) RefreshContent(false); else SyncValues(); };
         }
 
         int S(float v) { return (int)Math.Round(v * s); }
@@ -271,7 +271,7 @@ namespace TrayMixer
 
         protected override void WndProc(ref Message m)
         {
-            if (m.Msg == 0x83 && m.WParam != IntPtr.Zero) { m.Result = IntPtr.Zero; return; } // WM_NCCALCSIZE: всё окно — клиентская область
+            if (m.Msg == 0x83 && m.WParam != IntPtr.Zero) { m.Result = IntPtr.Zero; return; } // WM_NCCALCSIZE: the whole window is client area
             if (m.Msg == 0x84) { m.Result = (IntPtr)1; return; }                               // WM_NCHITTEST: HTCLIENT
             base.WndProc(ref m);
         }
@@ -285,20 +285,20 @@ namespace TrayMixer
             if (!IsHandleCreated) return;
             var m = new Native.MARGINS { L = -1, R = -1, T = -1, B = -1 };
             Native.DwmExtendFrameIntoClientArea(Handle, ref m);
-            int dark = T.Light ? 0 : 1; Native.DwmSetWindowAttribute(Handle, 20, ref dark, 4);  // тёмная рамка
-            int round = 2; Native.DwmSetWindowAttribute(Handle, 33, ref round, 4);                // скруглённые углы
+            int dark = T.Light ? 0 : 1; Native.DwmSetWindowAttribute(Handle, 20, ref dark, 4);  // dark frame
+            int round = 2; Native.DwmSetWindowAttribute(Handle, 33, ref round, 4);                // rounded corners
             int bd = backdrop; Native.DwmSetWindowAttribute(Handle, 38, ref bd, 4);               // Mica / Acrylic
         }
 
-        // ── Показ / скрытие ──
+        // ── Show / hide ──
         public void ShowPopup()
         {
             var nt = Theme.Load();
             if (!nt.SameAs(T)) { T = nt; ApplyBackdrop(); }
             RefreshContent(true);
             Show(); Activate(); Native.SetForegroundWindow(Handle);
-            sync.Start();
-            // Яркость читается в фоне: окно открывается сразу с прошлыми значениями
+            ticks = 0; sync.Start();
+            // Brightness is read in the background: the window opens at once with the previous values
             Brightness.ScanAsync(() => { try { BeginInvoke((Action)(() => RefreshContent(false))); } catch { } });
         }
 
@@ -315,7 +315,7 @@ namespace TrayMixer
         protected override void OnDeactivate(EventArgs e) { base.OnDeactivate(e); HidePopup(); }
         protected override bool ProcessCmdKey(ref Message msg, Keys key) { if (key == Keys.Escape) { HidePopup(); return true; } return base.ProcessCmdKey(ref msg, key); }
 
-        // ── Данные ──
+        // ── Data ──
         static string Sig(List<DeviceInfo> devs, List<AppInfo> apps, List<Display> disps)
         {
             var sb = new StringBuilder();
@@ -324,6 +324,7 @@ namespace TrayMixer
             foreach (var a in apps) sb.Append(a.Key).Append(':').Append(a.Vols.Count).Append('|');
             sb.Append("||");
             foreach (var d in disps) sb.Append(d.Key).Append('|');
+            sb.Append("v").Append(Brightness.Version); // new Display objects after a rescan must rebuild the rows
             return sb.ToString();
         }
 
@@ -356,14 +357,14 @@ namespace TrayMixer
                 {
                     K = Kind.Row, Text = d.Name, Key = "dev:" + d.Id, IsDefault = d.IsDefault,
                     Glyph = d.IsHeadphones ? Glyphs.Headphones : d.IsDisplay ? Glyphs.Monitor : Glyphs.Speaker,
-                    TitleClick = () => { Audio.SetDefault(dev.Id); RefreshContent(true); },
+                    TitleClick = () => { if (!Audio.SetDefault(dev.Id)) System.Media.SystemSounds.Beep.Play(); RefreshContent(true); },
                     GetVol = () => { float v; dev.Vol.GetMasterVolumeLevelScalar(out v); return v; },
                     SetVol = v => dev.Vol.SetMasterVolumeLevelScalar(v, ref Audio.Ctx),
                     GetMute = () => { bool m; dev.Vol.GetMute(out m); return m; },
                     SetMute = m => dev.Vol.SetMute(m, ref Audio.Ctx)
                 });
             }
-            if (devs.Count == 0) items.Add(new Item { K = Kind.Note, Text = "Нет устройств вывода" });
+            if (devs.Count == 0) items.Add(new Item { K = Kind.Note, Text = "No output devices" });
             items.Add(new Item { K = Kind.Sep });
             foreach (var a in apps.FindAll(x => !Hidden.Is("app:" + x.Key)))
             {
@@ -377,38 +378,38 @@ namespace TrayMixer
                     SetMute = m => { foreach (var x in app.Vols) try { x.SetMute(m, ref Audio.Ctx); } catch { } }
                 });
             }
-            if (apps.Count == 0) items.Add(new Item { K = Kind.Note, Text = "Сейчас ничего не воспроизводит звук" });
-            // Яркость экранов: раздел появляется, только если есть экран с регулируемой яркостью
+            if (apps.Count == 0) items.Add(new Item { K = Kind.Note, Text = "Nothing is playing sound right now" });
+            // Screen brightness: the section appears only if some screen has adjustable brightness
             var shown = disps.FindAll(x => !Hidden.Is("disp:" + x.Key));
             if (shown.Count > 0) items.Add(new Item { K = Kind.Sep });
             foreach (var d in shown)
             {
-                var disp = d;
+                string dk = d.Key; // rows look the Display up by key, so a rescan cannot leave them with a closed one
                 items.Add(new Item
                 {
                     K = Kind.Row, Text = d.Name, Key = "disp:" + d.Key, Glyph = Glyphs.Sun,
-                    GetVol = () => disp.Percent / 100f,
-                    SetVol = v => disp.Set((int)Math.Round(v * 100))
+                    GetVol = () => { var x = Brightness.Find(dk); return x == null ? 0f : x.Percent / 100f; },
+                    SetVol = v => { var x = Brightness.Find(dk); if (x != null) x.Set((int)Math.Round(v * 100)); }
                 });
             }
-            // Фильтр синего света и затемнение — для всех экранов сразу; клик по иконке включает и выключает
+            // Blue light filter and dimming apply to all screens at once; clicking the icon switches them on and off
             bool blue = !Hidden.Is("blue:filter"), dim = !Hidden.Is("blue:dim");
             if (blue || dim) items.Add(new Item { K = Kind.Sep });
             if (blue)
                 items.Add(new Item
                 {
-                    K = Kind.Row, Text = Loc.En ? "Blue light filter" : "Фильтр синего света", Key = "blue:filter", Glyph = Glyphs.Moon,
+                    K = Kind.Row, Text = "Blue light filter", Key = "blue:filter", Glyph = Glyphs.Moon,
                     GetVol = () => BlueLight.Strength / 100f, SetVol = v => BlueLight.SetStrength((int)Math.Round(v * 100)),
                     GetMute = () => !BlueLight.FilterOn, SetMute = m => BlueLight.SetFilterOn(!m)
                 });
             if (dim)
                 items.Add(new Item
                 {
-                    K = Kind.Row, Text = Loc.En ? "Dimming" : "Затемнение", Key = "blue:dim", Glyph = Glyphs.Dim,
+                    K = Kind.Row, Text = "Dimming", Key = "blue:dim", Glyph = Glyphs.Dim,
                     GetVol = () => BlueLight.Dim / 100f, SetVol = v => BlueLight.SetDim((int)Math.Round(v * 100)),
                     GetMute = () => !BlueLight.DimOn, SetMute = m => BlueLight.SetDimOn(!m)
                 });
-            items.Add(new Item { K = Kind.Footer, Text = Loc.En ? "Volume" : "Громкость" });
+            items.Add(new Item { K = Kind.Footer, Text = "Volume" });
 
             int y = S(6);
             foreach (var it in items)
@@ -432,8 +433,8 @@ namespace TrayMixer
             SetBounds(x, Math.Max(wa.Top, y), w, h);
         }
 
-        // ── Геометрия строки (компактная: иконка слева, название над слайдером) ──
-        // Сетка: поля 16, иконки 16–36, контент (название и начало дорожки) с 50, числа прижаты к правому полю
+        // ── Row geometry (compact: icon on the left, title above the slider) ──
+        // Grid: margins 16, icons 16-36, content (title and start of the track) from 50, numbers pinned to the right margin
         const int M = 16, L = 50, ValW = 40, Rad = 10;
         RectangleF IconRect(Item it) { return new RectangleF(S(10), it.Y + S(25.5f) - S(16), S(32), S(32)); }
         RectangleF TitleRect(Item it) { return new RectangleF(S(L), it.Y + S(5), Width - S(L) - S(M), S(20)); }
@@ -441,7 +442,7 @@ namespace TrayMixer
         RectangleF PctRect(Item it) { return new RectangleF(Width - S(M + ValW), it.Y + S(21), S(ValW), S(26)); }
         RectangleF FooterBtn(Item it, int i) { return new RectangleF(Width - S(8) - S(32) * (FooterUris.Length - i), it.Y + (it.H - S(32)) / 2f, S(32), S(32)); }
 
-        // ── Отрисовка в DIB с альфа-каналом (нужно для Mica) ──
+        // ── Drawing into a DIB with an alpha channel (needed for Mica) ──
         protected override void OnPaintBackground(PaintEventArgs e) { }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -478,7 +479,7 @@ namespace TrayMixer
 
         void Render(Graphics g)
         {
-            // Acrylic у DWM выходит светло-серым и плоским — тонируем, как флайауты Windows 11
+            // DWM Acrylic comes out light gray and flat, so tint it like Windows 11 flyouts
             g.Clear(backdrop == Acrylic ? T.Tint : Color.Transparent);
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
@@ -495,7 +496,7 @@ namespace TrayMixer
             }
         }
 
-        // Отладка: отрисовать окно поверх заданного фона без показа на экране
+        // Debug: render the window over the given background without showing it on screen
         public void RenderTo(string path, Color bg)
         {
             try { Brightness.Scan(); } catch { }
@@ -513,7 +514,7 @@ namespace TrayMixer
 
         static void Str(Graphics g, string s, Font f, Color c, RectangleF r, StringFormat sf) { GdiText.Draw(g, s, f, c, r, sf.Alignment); }
 
-        // Нижняя панель: подпись и кнопки (микшер Windows, параметры звука)
+        // Footer: label and buttons (Windows volume mixer, sound settings)
         void DrawFooter(Graphics g, Item it, StringFormat sf)
         {
             using (var b = new SolidBrush(T.Footer)) g.FillRectangle(b, 0, it.Y, Width, Height - it.Y);
@@ -535,7 +536,7 @@ namespace TrayMixer
             if (it.IsDefault) Fill(g, T.Accent, Pill(new RectangleF(S(4), ir.Y + ir.Height / 2 - S(7), S(3), S(14))));
 
             if (hoverItem == it && hoverPart == 1) Fill(g, T.Hover, Round(ir, S(5)));
-            // Иконка всегда своя; при выключенном звуке — тусклая и со значком
+            // The icon is always the row's own; when muted it is dimmed and gets a badge
             float sz = S(20);
             var r = new RectangleF((float)Math.Round(ir.X + (ir.Width - sz) / 2), (float)Math.Round(ir.Y + (ir.Height - sz) / 2), sz, sz);
             if (it.Img != null)
@@ -563,7 +564,7 @@ namespace TrayMixer
             using (var rf = new StringFormat(sf) { Alignment = StringAlignment.Far })
                 Str(g, it.Muted ? "—" : it.Value.ToString(), fValue, it.Muted ? T.Sub : T.Fg, PctRect(it), rf);
 
-            // Слайдер в стиле Windows 11
+            // Windows 11 style slider
             var sr = SliderRect(it);
             float rad = S(10), th = Math.Max(2, S(4)), x0 = sr.X + rad, x1 = sr.Right - rad, scy = sr.Y + sr.Height / 2;
             float cx = x0 + (x1 - x0) * it.Value / 100f;
@@ -588,7 +589,7 @@ namespace TrayMixer
             p.CloseFigure(); return p;
         }
 
-        // ── Мышь ──
+        // ── Mouse ──
         Item RowAt(Point p)
         {
             foreach (var it in items)
@@ -656,9 +657,9 @@ namespace TrayMixer
             var it = RowAt(e.Location); int part = PartAt(it, e.Location);
             if (e.Button == MouseButtons.Right && it != null && it.K == Kind.Row)
             {
-                // Правый клик по строке — скрыть её (вернуть можно в меню значка в трее)
+                // Right click on a row hides it (it can be brought back from the tray icon menu)
                 var row = it;
-                new ContextMenu(new[] { new MenuItem("Скрыть «" + row.Text + "»", delegate { Hidden.Hide(row.Key, row.Text); RefreshContent(true); }) })
+                new ContextMenu(new[] { new MenuItem("Hide \"" + row.Text + "\"", delegate { Hidden.Hide(row.Key, row.Text); RefreshContent(true); }) })
                     .Show(this, e.Location);
                 return;
             }
@@ -678,15 +679,21 @@ namespace TrayMixer
         protected override void OnMouseWheel(MouseEventArgs e)
         {
             var it = RowAt(e.Location);
-            if (it != null && it.K == Kind.Row) Apply(it, it.Value + (e.Delta > 0 ? 2 : -2));
+            if (it == null || it.K != Kind.Row) return;
+            // Touchpads send many small deltas: collect them and step once per full notch (120)
+            wheel += e.Delta;
+            int steps = wheel / 120;
+            if (steps == 0) return;
+            wheel -= steps * 120;
+            Apply(it, it.Value + steps * 2);
         }
     }
 
-    // ───────────────────────── Скрытые строки (хранятся в реестре) ─────────────────────────
+    // ───────────────────────── Hidden rows (stored in the registry) ─────────────────────────
     static class Hidden
     {
         const string RegKey = @"Software\TrayMixer";
-        public static readonly Dictionary<string, string> Items = Load(); // ключ → название
+        public static readonly Dictionary<string, string> Items = Load(); // key -> title
 
         static Dictionary<string, string> Load()
         {
@@ -707,7 +714,8 @@ namespace TrayMixer
         {
             var l = new List<string>();
             foreach (var kv in Items) l.Add(kv.Key + "|" + kv.Value);
-            using (var k = Registry.CurrentUser.CreateSubKey(RegKey)) k.SetValue("Hidden", l.ToArray(), RegistryValueKind.MultiString);
+            try { using (var k = Registry.CurrentUser.CreateSubKey(RegKey)) k.SetValue("Hidden", l.ToArray(), RegistryValueKind.MultiString); }
+            catch { } // a registry failure must not crash the tray process
         }
 
         public static bool Is(string key) { return Items.ContainsKey(key); }
@@ -716,7 +724,7 @@ namespace TrayMixer
         public static void ShowAll() { Items.Clear(); Save(); }
     }
 
-    // ───────────────────────── Уведомления о звуке ─────────────────────────
+    // ───────────────────────── Sound notifications ─────────────────────────
     [ComVisible(true)]
     class Notifier : IMMNotificationClient, IAudioEndpointVolumeCallback
     {
@@ -731,7 +739,7 @@ namespace TrayMixer
         public int OnNotify(IntPtr data) { Post(VolumeChanged); return 0; }
     }
 
-    // ───────────────────────── Трей ─────────────────────────
+    // ───────────────────────── Tray ─────────────────────────
     class TrayApp
     {
         const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run", AppName = "TrayMixer", CfgKey = @"Software\TrayMixer";
@@ -745,22 +753,22 @@ namespace TrayMixer
         public TrayApp(float scale)
         {
             popup = new Popup(Theme.RegInt(CfgKey, "Backdrop", Popup.Mica), scale);
-            popup.CreateControl(); GC.KeepAlive(popup.Handle); // окно нужно сразу: через него приходят уведомления
+            popup.CreateControl(); GC.KeepAlive(popup.Handle); // the window is needed right away: notifications arrive through it
 
-            try { Native.SetPreferredAppMode(1); Native.FlushMenuThemes(); } catch { } // тёмное контекстное меню
-            micaItem = new MenuItem("Фон: Mica", delegate { SetBackdrop(Popup.Mica); }) { RadioCheck = true };
-            acrylicItem = new MenuItem("Фон: Acrylic", delegate { SetBackdrop(Popup.Acrylic); }) { RadioCheck = true };
-            autoItem = new MenuItem("Запускать вместе с Windows", delegate { ToggleAutostart(); }) { Checked = IsAutostart() };
-            var hiddenItem = new MenuItem("Скрытые", new[] { new MenuItem("-") });
+            try { Native.SetPreferredAppMode(1); Native.FlushMenuThemes(); } catch { } // dark context menu
+            micaItem = new MenuItem("Background: Mica", delegate { SetBackdrop(Popup.Mica); }) { RadioCheck = true };
+            acrylicItem = new MenuItem("Background: Acrylic", delegate { SetBackdrop(Popup.Acrylic); }) { RadioCheck = true };
+            autoItem = new MenuItem("Run at Windows startup", delegate { ToggleAutostart(); }) { Checked = IsAutostart() };
+            var hiddenItem = new MenuItem("Hidden", new[] { new MenuItem("-") });
             hiddenItem.Popup += delegate { FillHidden(hiddenItem); };
             icon.ContextMenu = new ContextMenu(new[]
             {
-                new MenuItem("Параметры звука", delegate { Open("ms-settings:sound"); }),
-                new MenuItem("Микшер Windows", delegate { Open("ms-settings:apps-volume"); }),
+                new MenuItem("Sound settings", delegate { Open("ms-settings:sound"); }),
+                new MenuItem("Windows volume mixer", delegate { Open("ms-settings:apps-volume"); }),
                 new MenuItem("-"), hiddenItem,
                 new MenuItem("-"), micaItem, acrylicItem,
                 new MenuItem("-"), autoItem,
-                new MenuItem("Выход", delegate { icon.Visible = false; BlueLight.Reset(); Application.Exit(); })
+                new MenuItem("Exit", delegate { icon.Visible = false; BlueLight.Reset(); Application.Exit(); })
             });
             icon.MouseClick += OnTrayClick;
             UpdateChecks();
@@ -772,13 +780,13 @@ namespace TrayMixer
             };
             try { Audio.En.RegisterEndpointNotificationCallback(notifier); } catch { }
             Rebind();
-            Brightness.ScanAsync(null); // прогреть список экранов к первому открытию
-            BlueLight.Start();          // вернуть фильтр синего света и затемнение с прошлого запуска
+            Brightness.ScanAsync(null); // warm up the screen list before the first open
+            BlueLight.Start();          // restore the blue light filter and dimming from the last run
             icon.Visible = true;
             Native.Trim();
         }
 
-        // Подписка на громкость текущего устройства по умолчанию
+        // Subscribe to the volume of the current default device
         void Rebind()
         {
             if (defVol != null) try { defVol.UnregisterControlChangeNotify(notifier); } catch { }
@@ -787,18 +795,18 @@ namespace TrayMixer
             UpdateTray();
         }
 
-        // Подменю «Скрытые»: клик возвращает строку в окно
+        // "Hidden" submenu: a click brings the row back into the window
         static void FillHidden(MenuItem menu)
         {
             menu.MenuItems.Clear();
-            if (Hidden.Items.Count == 0) { menu.MenuItems.Add(new MenuItem("Нет скрытых") { Enabled = false }); return; }
+            if (Hidden.Items.Count == 0) { menu.MenuItems.Add(new MenuItem("No hidden items") { Enabled = false }); return; }
             foreach (var kv in new Dictionary<string, string>(Hidden.Items))
             {
                 string key = kv.Key;
-                menu.MenuItems.Add(new MenuItem("Показать «" + kv.Value + "»", delegate { Hidden.Show(key); }));
+                menu.MenuItems.Add(new MenuItem("Show \"" + kv.Value + "\"", delegate { Hidden.Show(key); }));
             }
             menu.MenuItems.Add(new MenuItem("-"));
-            menu.MenuItems.Add(new MenuItem("Показать все", delegate { Hidden.ShowAll(); }));
+            menu.MenuItems.Add(new MenuItem("Show all", delegate { Hidden.ShowAll(); }));
         }
 
         void SetBackdrop(int b)
@@ -825,7 +833,7 @@ namespace TrayMixer
 
         void UpdateTray()
         {
-            string glyph = "off", text = "Нет устройства вывода";
+            string glyph = "off", text = "No output device";
             try
             {
                 if (defVol != null)
@@ -833,7 +841,7 @@ namespace TrayMixer
                     float l; bool m; defVol.GetMasterVolumeLevelScalar(out l); defVol.GetMute(out m);
                     int p = (int)Math.Round(l * 100);
                     glyph = m ? "off" : "on";
-                    text = "Громкость: " + (m ? "выкл." : p + "%");
+                    text = "Volume: " + (m ? "muted" : p + "%");
                 }
             }
             catch { }
@@ -882,18 +890,17 @@ namespace TrayMixer
         [STAThread]
         static void Main(string[] args)
         {
-            // Защита от подмены DLL: системные библиотеки грузятся только из System32, не из папки с exe
+            // Protection against DLL planting: system libraries load only from System32, not from the exe folder
             try { Native.SetDefaultDllDirectories(0x800); } catch { }
             Native.SetProcessDPIAware();
             float scale; using (var g = Graphics.FromHwnd(IntPtr.Zero)) scale = g.DpiX / 96f;
             if (args.Length > 1 && args[0] == "--make-icon" && args[1].EndsWith(".ico", StringComparison.OrdinalIgnoreCase)) { Art.WriteIco(args[1]); return; }
-            if (args.Length > 2 && args[2] == "en") Loc.En = true; // скриншот для README на английском
             if (args.Length > 1 && args[0] == "--render" && args[1].EndsWith(".png", StringComparison.OrdinalIgnoreCase)) { var p = new Popup(Popup.Mica, scale); p.CreateControl(); p.RenderTo(args[1], Color.FromArgb(32, 32, 32)); return; }
             bool created;
             using (new Mutex(true, @"Local\TrayMixer_7c1f3e2a-5b0d-4f9e-9a61-2d8c4b7e1a90", out created))
             {
                 if (!created) return;
-                // При первом запуске включаем автозапуск; путь обновляется, если exe перенесли
+                // Autostart is switched on at first launch; the path is refreshed if the exe was moved
                 using (var k = Registry.CurrentUser.CreateSubKey(@"Software\TrayMixer"))
                     if (k.GetValue("Initialized") == null) { TrayApp.SetAutostart(true); k.SetValue("Initialized", 1); }
                 if (TrayApp.IsAutostart()) TrayApp.SetAutostart(true);
