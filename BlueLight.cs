@@ -1,6 +1,6 @@
-// TrayMixer — фильтр синего света и затемнение экранов через гамма-таблицу видеокарты (SetDeviceGammaRamp).
-// Работает на любом мониторе без DDC/CI. Windows по умолчанию не даёт ставить слишком «крутые» таблицы,
-// поэтому при отказе сила эффекта плавно уменьшается до наибольшей допустимой.
+// TrayMixer: blue light filter and screen dimming through the video card gamma table (SetDeviceGammaRamp).
+// Works on any monitor without DDC/CI. Windows refuses "too steep" tables by default,
+// so when it refuses, the effect strength is reduced step by step to the largest value it accepts.
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -12,15 +12,18 @@ namespace TrayMixer
     static class BlueLight
     {
         const string CfgKey = @"Software\TrayMixer";
-        const int MinKelvin = 2000;            // цветовая температура при силе 100
-        const double MaxDim = 0.8;             // затемнение 100 оставляет 20% яркости
+        const int MinKelvin = 2000;            // color temperature at strength 100
+        const double MaxDim = 0.8;             // dimming 100 leaves 20% brightness
 
         static volatile int strength = Clamp(Theme.RegInt(CfgKey, "BlueFilter", 0)), dim = Clamp(Theme.RegInt(CfgKey, "BlueDim", 0));
         static volatile bool filterOn = Theme.RegInt(CfgKey, "BlueFilterOn", 1) == 1, dimOn = Theme.RegInt(CfgKey, "BlueDimOn", 1) == 1;
         static readonly object io = new object(), q = new object();
-        static readonly Dictionary<string, ushort[]> applied = new Dictionary<string, ushort[]>(); // что удалось поставить каждому экрану
+        static readonly Dictionary<string, ushort[]> applied = new Dictionary<string, ushort[]>(); // what was applied to each screen
         static bool busy, pending, touched;
         static Timer guard;
+        static volatile bool stopped;     // Reset was called: no more writes
+        static bool dirtyFlag;            // mirrors the registry flag
+        const string DirtyValue = "GammaApplied";
 
         public static int Strength { get { return strength; } }
         public static int Dim { get { return dim; } }
@@ -35,23 +38,52 @@ namespace TrayMixer
         static int Clamp(int v) { return Math.Max(0, Math.Min(100, v)); }
         static bool Active { get { return (filterOn && strength > 0) || (dimOn && dim > 0); } }
 
-        // Применить сохранённые настройки и следить, чтобы таблицу не сбросили (смена режима, выход из сна, игры)
+        // Apply saved settings and make sure nobody resets the table (mode switch, wake from sleep, games)
         public static void Start()
         {
             SystemEvents.DisplaySettingsChanged += delegate { lock (io) applied.Clear(); if (Active) Apply(); };
             SystemEvents.PowerModeChanged += (s, e) => { if (e.Mode == PowerModes.Resume && Active) Apply(); };
+            // Put the gamma back however the process ends (menu Exit, logoff, shutdown)
+            AppDomain.CurrentDomain.ProcessExit += delegate { Reset(); };
+            SystemEvents.SessionEnding += delegate { Reset(); };
             guard = new Timer(delegate { if (Active) try { Write(true); } catch { } }, null, 5000, 5000);
             if (Active) Apply();
+            else if (Theme.RegInt(CfgKey, DirtyValue, 0) == 1)
+                // The previous run was killed while the table was still changed: restore normal gamma once
+                ThreadPool.QueueUserWorkItem(delegate { try { RestoreNormal(); } catch { } });
         }
 
-        // Вернуть экранам обычную гамму (при выходе)
+        // Give the screens their normal gamma back (on exit)
         public static void Reset()
         {
-            if (guard != null) guard.Dispose();
-            lock (io) if (touched) ForEachScreen((dc, name) => Native.SetDeviceGammaRamp(dc, Ramp(1, 1, 1)));
+            stopped = true;
+            var g = guard; if (g != null) g.Dispose();
+            RestoreNormal();
         }
 
-        // Запись идёт в фоне; пока она занята, копится только последнее значение
+        static void RestoreNormal()
+        {
+            lock (io)
+            {
+                if (touched || dirtyFlag || Theme.RegInt(CfgKey, DirtyValue, 0) == 1)
+                    ForEachScreen((dc, name) => Native.SetDeviceGammaRamp(dc, Ramp(1, 1, 1)));
+                touched = false; applied.Clear(); SetDirty(false);
+            }
+        }
+
+        // Registry flag: the gamma table is currently changed by TrayMixer (survives a kill or crash)
+        static void SetDirty(bool on)
+        {
+            try
+            {
+                using (var k = Registry.CurrentUser.CreateSubKey(CfgKey))
+                    if (on) k.SetValue(DirtyValue, 1); else k.DeleteValue(DirtyValue, false);
+            }
+            catch { }
+            dirtyFlag = on;
+        }
+
+        // Writing happens in the background; while it is busy only the latest value is kept
         static void Apply()
         {
             lock (q) { pending = true; if (busy) return; busy = true; }
@@ -74,13 +106,17 @@ namespace TrayMixer
             }
         }
 
-        // check — только восстановить таблицу там, где её подменили
+        // check: only restore the table where it was replaced
         static void Write(bool check)
         {
             lock (io)
             {
+                if (stopped) return;
                 touched = true;
                 double r, g, b; Target(out r, out g, out b);
+                bool identity = r >= 1 && g >= 1 && b >= 1;
+                if (!identity && !dirtyFlag) SetDirty(true);
+                else if (identity && dirtyFlag) SetDirty(false);
                 ForEachScreen((dc, name) =>
                 {
                     ushort[] last;
@@ -89,7 +125,7 @@ namespace TrayMixer
                         var cur = new ushort[768];
                         if (!Native.GetDeviceGammaRamp(dc, cur) || Same(cur, last)) return;
                     }
-                    // Полный эффект, а если Windows отказывает — наибольшая доля, которую она примет
+                    // Full effect; if Windows refuses, the largest share it accepts
                     var ramp = Ramp(r, g, b);
                     if (!Native.SetDeviceGammaRamp(dc, ramp))
                     {
@@ -107,7 +143,7 @@ namespace TrayMixer
             }
         }
 
-        // Множители каналов: тёплая цветовая температура и общее затемнение
+        // Channel multipliers: warm color temperature and overall dimming
         static void Target(out double r, out double g, out double b)
         {
             r = g = b = 1;
@@ -121,7 +157,7 @@ namespace TrayMixer
             if (dimOn && dim > 0) { double m = 1 - MaxDim * dim / 100.0; r *= m; g *= m; b *= m; }
         }
 
-        // Цвет абсолютно чёрного тела (приближение Таннера Хелланда), 0–1 по каналам
+        // Black body color (Tanner Helland approximation), 0-1 per channel
         static void Kelvin(double k, out double r, out double g, out double b)
         {
             double t = k / 100;
@@ -145,7 +181,7 @@ namespace TrayMixer
 
         static bool Same(ushort[] a, ushort[] b)
         {
-            for (int i = 0; i < a.Length; i++) if (Math.Abs(a[i] - b[i]) > 256) return false; // драйвер может чуть округлить
+            for (int i = 0; i < a.Length; i++) if (Math.Abs(a[i] - b[i]) > 256) return false; // the driver may round slightly
             return true;
         }
 

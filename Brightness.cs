@@ -1,6 +1,6 @@
-// TrayMixer — яркость экранов: внешние мониторы через DDC/CI, встроенный экран ноутбука через WMI.
-// Обмен с монитором медленный (десятки миллисекунд), поэтому чтение и запись идут в фоне,
-// а окно работает с последним известным значением.
+// TrayMixer: screen brightness. External monitors use DDC/CI, the laptop's built-in screen uses WMI.
+// Talking to a monitor is slow (tens of milliseconds), so reads and writes run in the background
+// and the window works with the last known value.
 using System;
 using System.Collections.Generic;
 using System.Management;
@@ -14,7 +14,7 @@ namespace TrayMixer
     {
         public string Key, Name;
         public bool Internal;
-        internal IntPtr Phys;            // физический монитор DDC/CI (для внешних)
+        internal IntPtr Phys;            // physical monitor for DDC/CI (external displays)
         int min, max = 100;
         volatile int cur;                // 0–100
         readonly object io = new object(), q = new object();
@@ -22,7 +22,7 @@ namespace TrayMixer
 
         public int Percent { get { return cur; } }
 
-        // Запись идёт в фоне; пока монитор занят, копится только последнее значение
+        // Writing happens in the background; while the monitor is busy only the latest value is kept
         public void Set(int pct)
         {
             pct = Math.Max(0, Math.Min(100, pct));
@@ -52,12 +52,12 @@ namespace TrayMixer
             }
         }
 
-        // Прочитать значение с монитора; false — монитор не отвечает
+        // Read the value from the monitor; false means the monitor does not answer
         internal bool Read()
         {
             lock (io)
             {
-                lock (q) if (busy) return true; // пользователь двигает слайдер — его значение важнее
+                lock (q) if (busy) return true; // the user is moving the slider, so their value wins
                 try
                 {
                     if (Internal) { int v; if (!Brightness.WmiGet(out v)) return false; cur = v; return true; }
@@ -83,12 +83,26 @@ namespace TrayMixer
         static int scanning;
         static volatile bool dirty;
 
-        static Brightness() { SystemEvents.DisplaySettingsChanged += delegate { dirty = true; }; }
+        static int version;              // bumped whenever the Display objects are replaced or the list changes
+        static string lastSig = "";
 
-        // Последний известный список экранов (не меняется после публикации)
+        // Rescan right away when the monitor setup changes, so the window never keeps handles of closed monitors
+        static Brightness() { SystemEvents.DisplaySettingsChanged += delegate { dirty = true; ScanAsync(null); }; }
+
+        // Last known list of screens (never modified after it is published)
         public static List<Display> Displays { get { return list; } }
 
-        // Пересканировать экраны в фоне и по готовности вызвать done (из фонового потока)
+        // Changes whenever Displays holds different objects than before
+        public static int Version { get { return Interlocked.CompareExchange(ref version, 0, 0); } }
+
+        // The current Display for a key (rows look it up at write time instead of holding an old object)
+        public static Display Find(string key)
+        {
+            foreach (var d in list) if (d.Key == key) return d;
+            return null;
+        }
+
+        // Rescan the screens in the background and call done when finished (from a background thread)
         public static void ScanAsync(Action done)
         {
             if (Interlocked.Exchange(ref scanning, 1) == 1) return;
@@ -140,21 +154,26 @@ namespace TrayMixer
                 return true;
             }, IntPtr.Zero);
 
-            // Оставляем только экраны, которые отвечают; у знакомых прощаем разовый сбой
+            // Keep only the screens that answer; a known screen is forgiven a single failure
             var ok = new List<Display>();
             foreach (var d in found)
             {
-                bool known = list.Contains(d);
+                bool known = Find(d.Key) != null; // match by key: reused or recreated objects both count as known
                 if (d.Read() || known) ok.Add(d); else d.Close();
             }
             int k = 0;
-            foreach (var d in ok) if (string.IsNullOrEmpty(d.Name)) d.Name = d.Internal ? "Встроенный экран" : "Монитор " + (++k);
+            foreach (var d in ok) if (string.IsNullOrEmpty(d.Name)) d.Name = d.Internal ? "Built-in display" : "Monitor " + (++k);
             ok.Sort((a, b) => a.Internal == b.Internal ? string.Compare(a.Name, b.Name, StringComparison.CurrentCultureIgnoreCase) : (a.Internal ? -1 : 1));
             list = ok;
+            var sb = new System.Text.StringBuilder();
+            foreach (var d in ok) sb.Append(d.Key).Append('=').Append(d.Name).Append('|');
+            string sig = sb.ToString();
+            if (!reuse || sig != lastSig) Interlocked.Increment(ref version);
+            lastSig = sig;
             foreach (var d in old.Values) d.Close();
         }
 
-        // ── Имена мониторов из EDID через DisplayConfig: «\\.\DISPLAY1» → «DELL U2720Q» ──
+        // ── Monitor names from EDID through DisplayConfig: "\\.\DISPLAY1" -> "DELL U2720Q" ──
         struct Target { public string Path, Name; public bool Internal; }
 
         static Dictionary<string, Target> TargetNames()
@@ -184,7 +203,7 @@ namespace TrayMixer
                     {
                         Path = string.IsNullOrEmpty(tgt.monitorDevicePath) ? src.viewGdiDeviceName : tgt.monitorDevicePath,
                         Name = tgt.monitorFriendlyDeviceName,
-                        Internal = tech == 0x80000000 || tech == 11 || tech == 13 // встроенный, eDP, UDI embedded
+                        Internal = tech == 0x80000000 || tech == 11 || tech == 13 // internal, eDP, UDI embedded
                     };
                 }
             }
@@ -192,7 +211,7 @@ namespace TrayMixer
             return res;
         }
 
-        // ── Встроенный экран: WMI ──
+        // ── Built-in screen: WMI ──
         internal static bool WmiGet(out int v)
         {
             v = 0;
@@ -237,7 +256,7 @@ namespace TrayMixer
 
         [StructLayout(LayoutKind.Sequential)] public struct LUID { public uint lo; public int hi; }
 
-        // DISPLAYCONFIG_PATH_INFO (72 байта), вложенные структуры развёрнуты
+        // DISPLAYCONFIG_PATH_INFO (72 bytes), nested structures flattened
         [StructLayout(LayoutKind.Sequential)]
         public struct DISPLAYCONFIG_PATH_INFO
         {

@@ -1,4 +1,4 @@
-// TrayMixer — работа с Core Audio (устройства, сессии приложений).
+// TrayMixer: Core Audio access (devices, application sessions).
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -34,7 +34,7 @@ namespace TrayMixer
         void UnregisterEndpointNotificationCallback(IMMNotificationClient client);
     }
 
-    // Уведомления Windows вместо постоянного опроса
+    // Windows notifications instead of constant polling
     [ComImport, Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     interface IMMNotificationClient
     {
@@ -124,7 +124,7 @@ namespace TrayMixer
         void GetMute([MarshalAs(UnmanagedType.Bool)] out bool m);
     }
 
-    // Недокументированный интерфейс для смены устройства по умолчанию
+    // Undocumented interface for changing the default device
     [ComImport, Guid("f8679f50-850a-41cf-9c72-430f290290c8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     interface IPolicyConfig
     {
@@ -165,15 +165,16 @@ namespace TrayMixer
             public int biCompression, biSizeImage, biXPelsPerMeter, biYPelsPerMeter, biClrUsed, biClrImportant;
         }
 
-        // Отдать неиспользуемую память системе
+        // Give unused memory back to the system.
+        // No WaitForPendingFinalizers here: it runs on the UI thread and can stall it behind COM wrappers.
         public static void Trim()
         {
-            GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+            GC.Collect();
             SetProcessWorkingSetSize(GetCurrentProcess(), (IntPtr)(-1), (IntPtr)(-1));
         }
     }
 
-    // ───────────────────────── Модель ─────────────────────────
+    // ───────────────────────── Model ─────────────────────────
     class DeviceInfo { public string Id, Name; public bool IsDefault, IsHeadphones, IsDisplay; public IAudioEndpointVolume Vol; }
     class AppInfo { public string Key, Name; public Bitmap Img; public bool IsSystem; public List<ISimpleAudioVolume> Vols = new List<ISimpleAudioVolume>(); }
 
@@ -223,7 +224,7 @@ namespace TrayMixer
                     IPropertyStore ps; d.OpenPropertyStore(0, out ps);
                     PROPVARIANT v;
                     ps.GetValue(ref PK_Name, out v);
-                    di.Name = v.vt == 31 ? Marshal.PtrToStringUni(v.p) : "Устройство";
+                    di.Name = v.vt == 31 ? Marshal.PtrToStringUni(v.p) : "Device";
                     Native.PropVariantClear(ref v);
                     ps.GetValue(ref PK_FormFactor, out v);
                     di.IsHeadphones = v.vt == 19 && (v.uintVal == 3 || v.uintVal == 5);
@@ -264,7 +265,7 @@ namespace TrayMixer
                     if (!map.TryGetValue(key, out a))
                     {
                         a = new AppInfo { Key = key, IsSystem = sys };
-                        if (sys) a.Name = TrayMixer.Loc.En ? "System sounds" : "Системные звуки";
+                        if (sys) a.Name = "System sounds";
                         else
                         {
                             string dn; s.GetDisplayName(out dn);
@@ -281,14 +282,19 @@ namespace TrayMixer
             return order;
         }
 
-        public static void SetDefault(string id)
+        // Make the device the default for all three roles; false if Windows refused any of them
+        public static bool SetDefault(string id)
         {
+            IPolicyConfig pc = null;
             try
             {
-                var pc = (IPolicyConfig)new PolicyConfigCo();
-                for (int r = 0; r < 3; r++) pc.SetDefaultEndpoint(id, r);
+                pc = (IPolicyConfig)new PolicyConfigCo();
+                bool ok = true;
+                for (int r = 0; r < 3; r++) if (pc.SetDefaultEndpoint(id, r) < 0) ok = false;
+                return ok;
             }
-            catch { }
+            catch { return false; }
+            finally { if (pc != null) Marshal.ReleaseComObject(pc); }
         }
 
         static bool Alive(int pid) { try { Process.GetProcessById(pid); return true; } catch { return false; } }
@@ -324,7 +330,7 @@ namespace TrayMixer
                 NameCache[path] = name;
                 return name;
             }
-            try { return Process.GetProcessById(pid).ProcessName; } catch { return "Приложение"; }
+            try { return Process.GetProcessById(pid).ProcessName; } catch { return "Application"; }
         }
 
         static Bitmap IconFor(string path)
