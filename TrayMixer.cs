@@ -18,8 +18,8 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyTitle("TrayMixer")]
 [assembly: System.Reflection.AssemblyProduct("TrayMixer")]
 [assembly: System.Reflection.AssemblyDescription("Lightweight Windows 11 tray volume mixer")]
-[assembly: System.Reflection.AssemblyVersion("2.5.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("2.5.0.0")]
+[assembly: System.Reflection.AssemblyVersion("2.6.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("2.6.0.0")]
 
 namespace TrayMixer
 {
@@ -756,6 +756,8 @@ namespace TrayMixer
             popup.CreateControl(); GC.KeepAlive(popup.Handle); // the window is needed right away: notifications arrive through it
 
             try { Native.SetPreferredAppMode(1); Native.FlushMenuThemes(); } catch { } // dark context menu
+            var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            string verStr = "TrayMixer " + ver.Major + "." + ver.Minor + "." + ver.Build;
             micaItem = new MenuItem("Background: Mica", delegate { SetBackdrop(Popup.Mica); }) { RadioCheck = true };
             acrylicItem = new MenuItem("Background: Acrylic", delegate { SetBackdrop(Popup.Acrylic); }) { RadioCheck = true };
             autoItem = new MenuItem("Run at Windows startup", delegate { ToggleAutostart(); }) { Checked = IsAutostart() };
@@ -763,6 +765,8 @@ namespace TrayMixer
             hiddenItem.Popup += delegate { FillHidden(hiddenItem); };
             icon.ContextMenu = new ContextMenu(new[]
             {
+                new MenuItem(verStr) { Enabled = false },
+                new MenuItem("-"),
                 new MenuItem("Sound settings", delegate { Open("ms-settings:sound"); }),
                 new MenuItem("Windows volume mixer", delegate { Open("ms-settings:apps-volume"); }),
                 new MenuItem("-"), hiddenItem,

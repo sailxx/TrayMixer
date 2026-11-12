@@ -7,5 +7,13 @@ if not exist TrayMixer.ico (
   start "" /wait TrayMixer.exe --make-icon TrayMixer.ico
 )
 %CSC% /out:TrayMixer.exe /win32icon:TrayMixer.ico TrayMixer.cs Audio.cs Brightness.cs BlueLight.cs || exit /b 1
-rem The installer embeds the exe built above (resource name = TrayMixer.exe)
-"%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:winexe /platform:x64 /optimize+ /debug- /win32manifest:installer\setup.manifest /win32icon:TrayMixer.ico /r:System.Windows.Forms.dll /r:System.Drawing.dll /resource:TrayMixer.exe,TrayMixer.exe /out:TrayMixer-Setup.exe installer\Setup.cs || exit /b 1
+
+rem Build the installer (Setup.cs) using dotnet
+dotnet build installer\Setup.cs -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:PublishTrimmed=true -p:DebugType=None -p:DebugSymbols=false -o bin\Release\net8.0\win-x64\installer\ || exit /b 1
+
+copy bin\Release\net8.0\win-x64\installer\Setup.exe TrayMixer-Setup.exe >nul
+
+echo.
+echo Build complete:
+echo   TrayMixer.exe        (portable, for manual use)
+echo   TrayMixer-Setup.exe  (installer that downloads from GitHub releases)
