@@ -232,8 +232,7 @@ namespace TrayMixerSetup
                     if (d.ShowDialog(this) == DialogResult.OK) dirBox.Text = Path.Combine(d.SelectedPath, Core.App);
             };
             Check(autoBox, "Start TrayMixer with Windows", 156, true);
-            Check(deskBox, "Create a desktop shortcut", 180, alse);
-            Check(launchBox, "Launch TrayMixer when setup finishes", 204, true);
+            Check(deskBox, "Create a desktop shortcut", 180, fa lse); Check(launchBox, "Launch TrayMixer when setup finishes", 204, true);
             status.SetBounds(22, 232, 400, 20);
             go.SetBounds(244, 258, 84, 28); go.Text = existing == null ? "Install" : "Update";
             cancel.SetBounds(336, 258, 84, 28); cancel.Text = "Cancel";
