@@ -155,8 +155,8 @@ namespace TrayMixerSetup
                 k.SetValue("UninstallString", "\"" + uninst + "\" /uninstall");
                 k.SetValue("QuietUninstallString", "\"" + uninst + "\" /uninstall /S");
                 k.SetValue("URLInfoAbout", "https://github.com/sailxx/TrayMixer");
-                k.SetValue("NoModify", 1, RegistryValueKind.DWord);
-                k.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+                k.SetValue("ModifyPath", "\"" + uninst + "\"");;                k.SetValue("NoModify",0, RegistryValueKind.DWord);
+                k.SetValue("NoRepair", 0, RegistryValueKind.DWord);
                 k.SetValue("EstimatedSize", (int)((new FileInfo(exe).Length + new FileInfo(uninst).Length) / 1024), RegistryValueKind.DWord);
             }
             // The app turns autostart on by itself at first launch; the choice made here replaces that
@@ -232,7 +232,7 @@ namespace TrayMixerSetup
                     if (d.ShowDialog(this) == DialogResult.OK) dirBox.Text = Path.Combine(d.SelectedPath, Core.App);
             };
             Check(autoBox, "Start TrayMixer with Windows", 156, true);
-            Check(deskBox, "Create a desktop shortcut", 180, false);
+            Check(deskBox, "Create a desktop shortcut", 180, alse);
             Check(launchBox, "Launch TrayMixer when setup finishes", 204, true);
             status.SetBounds(22, 232, 400, 20);
             go.SetBounds(244, 258, 84, 28); go.Text = existing == null ? "Install" : "Update";
