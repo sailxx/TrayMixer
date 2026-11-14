@@ -37,7 +37,7 @@ The Windows 11 volume mixer is buried in Settings, and the tray volume icon cont
 </details>
 
 > [!NOTE]
-> The TrayMixer interface and Setup are in English.
+> TrayMixer is in English. Setup opens with a choice of English or Russian and continues in the selected language.
 
 <br>
 
@@ -67,7 +67,7 @@ Get-FileHash .\TrayMixer-Setup.exe -Algorithm SHA256
 ## Install
 
 1. Download [`TrayMixer-Setup.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe) and run it.
-2. Choose the install folder (default: `%LOCALAPPDATA%\TrayMixer`).
+2. Select English or Russian, then choose the install folder (default: `%LOCALAPPDATA%\TrayMixer`).
 3. Setup installs the bundled app without an internet connection and creates desktop and Start menu shortcuts. Choose whether to enable autostart and launch the app.
 
 To update, download Setup from the latest release and run it again. Setup offers **Update** for an older installation or **Reinstall** for the same version, preserves preferences and the autostart choice, and refuses to downgrade a newer installation. Remove TrayMixer through Windows Installed apps; preferences are kept.

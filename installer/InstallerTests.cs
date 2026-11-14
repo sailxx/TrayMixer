@@ -8,6 +8,8 @@ internal static class InstallerTests
     [STAThread]
     private static int Main()
     {
+        System.Windows.Forms.Application.EnableVisualStyles();
+        System.Windows.Forms.Application.SetCompatibleTextRenderingDefault(false);
         string root = Path.Combine(Path.GetTempPath(), "TrayMixer-tests-" + Guid.NewGuid().ToString("N"));
         string key = @"Software\TrayMixerInstallerTests\" + Guid.NewGuid().ToString("N");
         Directory.CreateDirectory(root);
@@ -20,6 +22,7 @@ internal static class InstallerTests
         string app = Path.Combine(root, "App"), exe = Path.Combine(app, "TrayMixer.exe");
         try
         {
+            TestLanguageFlow(root);
             using (var cfg = Registry.CurrentUser.CreateSubKey(Program.ConfigKey)) cfg.SetValue("Preference", "preserved");
             Program.Install(app, false, false);
             Check(File.Exists(exe), "fresh install");
@@ -38,6 +41,8 @@ internal static class InstallerTests
                 form.Show();
                 var flag = BindingFlags.Instance | BindingFlags.NonPublic;
                 var button = (System.Windows.Forms.Button)typeof(SetupForm).GetField("install", flag).GetValue(form);
+                Check(button.Text == "Next >", "wizard opens with welcome");
+                button.PerformClick();
                 Check(button.Text == "Reinstall", "GUI detects same-version reinstall");
                 var launchBox = (System.Windows.Forms.CheckBox)typeof(SetupForm).GetField("launch", flag).GetValue(form);
                 launchBox.Checked = false;
@@ -96,6 +101,70 @@ internal static class InstallerTests
             Registry.CurrentUser.DeleteSubKeyTree(key, false);
             Directory.Delete(root, true);
         }
+    }
+    private static T Field<T>(object form, string name) where T : class
+    {
+        return form.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(form) as T;
+    }
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool PrintWindow(IntPtr window, IntPtr dc, uint flags);
+    private static void Capture(System.Windows.Forms.Form form, string name)
+    {
+        form.Activate();
+        form.Refresh();
+        DateTime paintDeadline = DateTime.UtcNow.AddMilliseconds(350);
+        while (DateTime.UtcNow < paintDeadline) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(15); }
+        using (var image = new System.Drawing.Bitmap(form.Width, form.Height))
+        using (var graphics = System.Drawing.Graphics.FromImage(image))
+        {
+            form.DrawToBitmap(image, new System.Drawing.Rectangle(0, 0, image.Width, image.Height));
+            Console.WriteLine("PASS: form-only render " + name);
+            image.Save(Path.Combine(Path.GetDirectoryName(System.Windows.Forms.Application.ExecutablePath), name + ".png"));
+        }
+    }
+    private static void TestLanguageFlow(string root)
+    {
+        foreach (bool ru in new[] { false, true })
+        {
+            SetupLanguage.Russian = false;
+            using (var language = new LanguageForm())
+            {
+                language.Show();
+                Field<System.Windows.Forms.RadioButton>(language, ru ? "russian" : "english").Checked = true;
+                Capture(language, ru ? "language-ru" : "language-en");
+                Field<System.Windows.Forms.Button>(language, "next").PerformClick();
+                Check(language.DialogResult == System.Windows.Forms.DialogResult.OK && SetupLanguage.Russian == ru, "language selection " + ru);
+            }
+            using (var form = new SetupForm(Path.Combine(root, "App")))
+            {
+                form.Show();
+                var button = Field<System.Windows.Forms.Button>(form, "install");
+                Check(button.Text == (ru ? "Далее >" : "Next >"), "localized welcome");
+                Capture(form, ru ? "welcome-ru" : "welcome-en");
+                button.PerformClick();
+                Check(button.Text == (ru ? "Установить" : "Install"), "localized fresh install");
+                Field<System.Windows.Forms.Button>(form, "back").PerformClick();
+                Check(button.Text == (ru ? "Далее >" : "Next >"), "back returns to welcome");
+                button.PerformClick();
+                Check(Field<System.Windows.Forms.CheckBox>(form, "launch").Text == (ru ? "Запустить TrayMixer после установки" : "Launch TrayMixer when finished"), "localized options");
+                Capture(form, ru ? "setup-ru" : "setup-en");
+                Field<System.Windows.Forms.CheckBox>(form, "launch").Checked = false;
+                button.PerformClick();
+                string finish = ru ? "Готово" : "Finish";
+                DateTime deadline = DateTime.UtcNow.AddSeconds(10);
+                while ((button.Text != finish || !button.Enabled) && DateTime.UtcNow < deadline) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(20); }
+                Check(button.Text == finish, "localized installation completes");
+                Capture(form, ru ? "finished-ru" : "finished-en");
+                form.Activate();
+                button.Focus();
+                button.PerformClick();
+                System.Windows.Forms.Application.DoEvents();
+                Check(!form.Visible, "finish closes installer");
+            }
+            Program.Uninstall(Path.Combine(root, "App"));
+        }
+        using (var language = new LanguageForm()) { language.Show(); language.Close(); Check(language.DialogResult != System.Windows.Forms.DialogResult.OK, "language cancellation does not continue"); }
+        SetupLanguage.Russian = false;
     }
     private static void Check(bool condition, string message)
     {

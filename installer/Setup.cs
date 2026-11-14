@@ -65,11 +65,17 @@ internal static class Program
             if (!mutex.WaitOne(0)) return 3;
             try
             {
+                if (!silent)
+                {
+                    SetupLanguage.Russian = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru";
+                    using (var language = new LanguageForm())
+                        if (language.ShowDialog() != DialogResult.OK) return 0;
+                }
                 if (uninstall)
                 {
-                    if (!silent && MessageBox.Show("Remove TrayMixer? Your preferences will be kept.", "TrayMixer Setup", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return 0;
+                    if (!silent && MessageBox.Show(SetupLanguage.T("Remove TrayMixer? Your preferences will be kept.", "Удалить TrayMixer? Ваши настройки будут сохранены."), SetupLanguage.T("TrayMixer Setup", "Установка TrayMixer"), MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return 0;
                     Uninstall(dir);
-                    if (!silent) MessageBox.Show("TrayMixer has been removed.", "TrayMixer Setup");
+                    if (!silent) MessageBox.Show(SetupLanguage.T("TrayMixer has been removed.", "TrayMixer удалён."), SetupLanguage.T("TrayMixer Setup", "Установка TrayMixer"));
                 }
                 else if (silent) Install(dir, autostart ?? DefaultAutostart(dir), launch);
                 else Application.Run(new SetupForm(dir));
@@ -111,7 +117,7 @@ internal static class Program
         string path = Path.Combine(dir, "TrayMixer.payload.exe");
         using (var input = Assembly.GetExecutingAssembly().GetManifestResourceStream("TrayMixer.Payload"))
         {
-            if (input == null) throw new InvalidOperationException("The installer payload is missing. Download Setup again.");
+            if (input == null) throw new InvalidOperationException(SetupLanguage.T("The installer payload is missing. Download Setup again.", "В установщике отсутствуют файлы программы. Скачайте его заново."));
             using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write)) input.CopyTo(output);
         }
         return path;
@@ -122,7 +128,7 @@ internal static class Program
         string dir = Path.GetFullPath(directory);
         string previous = InstalledDirectory();
         using (var registered = Registry.CurrentUser.OpenSubKey(UninstallKey))
-            if (registered != null && !SamePath(dir, previous)) throw new InvalidOperationException("An installation already exists at " + previous + ". Update it there, or uninstall it before choosing another folder.");
+            if (registered != null && !SamePath(dir, previous)) throw new InvalidOperationException(SetupLanguage.T("An installation already exists at ", "Программа уже установлена в ") + previous + SetupLanguage.T(". Update it there, or uninstall it before choosing another folder.", ". Обновите её в этой папке или удалите перед выбором другой."));
         Directory.CreateDirectory(dir);
         string staging = Path.Combine(dir, ".setup-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(staging);
@@ -133,7 +139,7 @@ internal static class Program
         try
         {
             string payload = ExtractPayload(staging);
-            if (VersionOf(payload) < VersionOf(exe)) throw new InvalidOperationException("A newer version is installed. Download the latest Setup to update or reinstall it.");
+            if (VersionOf(payload) < VersionOf(exe)) throw new InvalidOperationException(SetupLanguage.T("A newer version is installed. Download the latest Setup to update or reinstall it.", "Установлена более новая версия. Скачайте последний установщик для обновления или переустановки."));
             // Stage everything before stopping the installed app or touching its files.
             File.Copy(Application.ExecutablePath, Path.Combine(staging, UninstName));
             StopApp(exe);
@@ -219,7 +225,7 @@ internal static class Program
                 }
                 catch (System.ComponentModel.Win32Exception) { continue; }
                 process.Kill();
-                if (!process.WaitForExit(10000)) throw new IOException("TrayMixer is still running. Close it and try again.");
+                if (!process.WaitForExit(10000)) throw new IOException(SetupLanguage.T("TrayMixer is still running. Close it and try again.", "TrayMixer всё ещё работает. Закройте программу и повторите попытку."));
             }
     }
 
@@ -227,7 +233,7 @@ internal static class Program
     {
         if (!File.Exists(exe)) return;
         using (var process = Process.Start(new ProcessStartInfo(exe, "--reset-gamma") { UseShellExecute = false, CreateNoWindow = true }))
-            if (!process.WaitForExit(10000)) { process.Kill(); throw new IOException("TrayMixer did not finish resetting the display. Try again."); }
+            if (!process.WaitForExit(10000)) { process.Kill(); throw new IOException(SetupLanguage.T("TrayMixer did not finish resetting the display. Try again.", "TrayMixer не завершил восстановление экрана. Повторите попытку.")); }
     }
 
     private static void CreateShortcuts(string dir)
