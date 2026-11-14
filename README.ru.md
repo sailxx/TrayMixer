@@ -6,7 +6,7 @@
 
 <img src="assets/readme/hero-ru.svg" width="100%" alt="TrayMixer — громкость каждого устройства и приложения в одном окне Windows 11">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-ru.svg" height="52" alt="Скачать для Windows 11"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe"><img src="assets/readme/cta-ru.svg" height="52" alt="Скачать для Windows 11"></a>
 
 </div>
 
@@ -50,27 +50,27 @@
 Каждый релиз собирает GitHub Actions прямо из исходников, а GitHub подписывает происхождение файла (build provenance). Проверить можно так:
 
 ```bash
-gh attestation verify TrayMixer.exe --repo sailxx/TrayMixer
+gh attestation verify TrayMixer-Setup.exe --repo sailxx/TrayMixer
 ```
 
-Контрольная сумма SHA-256 лежит рядом с exe в каждом релизе (`TrayMixer.exe.sha256`):
+Контрольная сумма SHA-256 установщика указана в описании каждого релиза:
 
 ```powershell
-Get-FileHash .\TrayMixer.exe -Algorithm SHA256
+Get-FileHash .\TrayMixer-Setup.exe -Algorithm SHA256
 ```
 
 </details>
 
 ## Установка
 
-1. Скачайте [`TrayMixer.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe) и положите в постоянную папку, например `%LOCALAPPDATA%\TrayMixer`.
-2. Запустите. Значок появится в трее, автозапуск включится сам (выключается в меню).
+1. Скачайте [`TrayMixer-Setup.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe) и запустите.
+2. Выберите папку (по умолчанию `%LOCALAPPDATA%\TrayMixer`), автозапуск и запуск после установки. Ярлыки на рабочем столе и в меню «Пуск» создаются автоматически. Интернет для установки не нужен.
+3. Для обновления запустите Setup нового релиза; для переустановки — той же версии. Настройки сохраняются, установка более старой версии блокируется. Удаление доступно в списке установленных приложений Windows; настройки сохраняются.
 
-## Code signing policy
+В релизе публикуется только `TrayMixer-Setup.exe`; SHA-256 указан в описании релиза.
 
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+## Подпись и проверка
 
-- **What is signed:** only the official `TrayMixer.exe` that GitHub Actions builds from this repository when a `v*` tag is pushed (see `.github/workflows/release.yml`). Builds from forks, branches or local machines are never signed.
-- **Team roles:** committer, reviewer and approver of every signing request — [@sailxx](https://github.com/sailxx). Two-factor authentication is required for the GitHub and SignPath accounts.
-- **Privacy:** this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
-- **Verification:** besides the signature, every release carries a SHA-256 file and a GitHub build provenance attestation (`gh attestation verify TrayMixer.exe --repo sailxx/TrayMixer`).
+Установщик и встроенное приложение не имеют цифровой подписи. Windows SmartScreen может показать предупреждение; перед запуском проверьте источник релиза и контрольную сумму.
+
+GitHub Actions собирает релизы из исходников и публикует подтверждение происхождения сборки (`gh attestation verify TrayMixer-Setup.exe --repo sailxx/TrayMixer`). SHA-256 указан в описании релиза.

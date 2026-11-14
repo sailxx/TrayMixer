@@ -1,448 +1,260 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
-using System.Net;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
+using System.Threading;
+using System.Windows.Forms;
 using Microsoft.Win32;
 
 internal static class Program
 {
-    private const string AppName = "TrayMixer";
-    private const string ExeName = "TrayMixer.exe";
-    private const string UninstName = "Uninstall.exe";
-    private const string RepoOwner = "sailxx";
-    private const string RepoName = "TrayMixer";
+    internal const string AppName = "TrayMixer";
+    internal const string ExeName = "TrayMixer.exe";
+    internal const string UninstName = "Uninstall.exe";
+    internal static string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\TrayMixer";
+    internal static string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    internal static string ConfigKey = @"Software\TrayMixer";
+    internal static string Desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+    internal static string Menu = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), AppName);
 
     [STAThread]
     private static int Main(string[] args)
     {
-        AppDomain.CurrentDomain.UnhandledException += (_, e) => Log("Fatal: " + e.ExceptionObject);
-
-        bool install = false;
-        bool uninstall = false;
-        string? dirArg = null;
-
-        foreach (var a in args)
+        if (args.Length == 3 && args[0] == "/cleanup")
         {
-            if (a.Equals("/install", StringComparison.OrdinalIgnoreCase)) install = true;
-            else if (a.Equals("/uninstall", StringComparison.OrdinalIgnoreCase)) uninstall = true;
-            else if (a.StartsWith("/DIR=", StringComparison.OrdinalIgnoreCase)) dirArg = a.Substring(5).Trim('"');
-        }
-
-        string baseDir = dirArg ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
-
-        if (uninstall) return Uninstall(baseDir);
-        if (install) return Install(baseDir);
-
-        // Interactive mode (no args): check installed version and prompt
-        return InteractiveInstall(baseDir);
-    }
-
-    private static int InteractiveInstall(string dir)
-    {
-        // Read installed version from registry
-        string? installedVersion = GetInstalledVersion();
-
-        // Fetch latest version from GitHub
-        Console.WriteLine($"Checking latest {AppName} version...");
-        string? latestVersion = GetLatestVersion();
-
-        if (string.IsNullOrEmpty(latestVersion))
-        {
-            Console.WriteLine("ERROR: Cannot reach GitHub. Check your internet connection.");
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey(true);
-            return 1;
-        }
-
-        bool isInstalled = !string.IsNullOrEmpty(installedVersion) &&
-                           File.Exists(Path.Combine(dir, ExeName));
-
-        if (isInstalled)
-        {
-            // Compare versions (strip leading 'v')
-            string installed = installedVersion!.TrimStart('v');
-            string latest = latestVersion.TrimStart('v');
-
-            if (string.Equals(installed, latest, StringComparison.OrdinalIgnoreCase))
+            try
             {
-                Console.WriteLine($"{AppName} {latest} is already installed and up to date.");
-                Console.Write("Reinstall? [y/N] ");
-                string? answer = Console.ReadLine()?.Trim().ToLowerInvariant();
-                if (answer != "y" && answer != "yes")
-                {
-                    Console.WriteLine("No changes made.");
-                    return 0;
-                }
+                if (Path.GetFileName(args[2]) != UninstName) return 2;
+                using (var parent = Process.GetProcessById(int.Parse(args[1]))) parent.WaitForExit();
             }
-            else
-            {
-                Console.WriteLine($"Installed: {installed}  →  Latest: {latest}");
-                Console.Write($"Update {AppName} to {latest}? [Y/n] ");
-                string? answer = Console.ReadLine()?.Trim().ToLowerInvariant();
-                if (answer == "n" || answer == "no")
-                {
-                    Console.WriteLine("Update cancelled.");
-                    return 0;
-                }
-            }
-        }
-        else
-        {
-            Console.WriteLine($"Installing {AppName} {latestVersion}.");
-            Console.Write("Continue? [Y/n] ");
-            string? answer = Console.ReadLine()?.Trim().ToLowerInvariant();
-            if (answer == "n" || answer == "no")
-            {
-                Console.WriteLine("Installation cancelled.");
-                return 0;
-            }
-        }
-
-        return Install(dir);
-    }
-
-    private static string? GetInstalledVersion()
-    {
-        try
-        {
-            string keyPath = $@"Software\Microsoft\Windows\CurrentVersion\Uninstall\{AppName}";
-            using var key = Registry.CurrentUser.OpenSubKey(keyPath);
-            return key?.GetValue("DisplayVersion") as string;
-        }
-        catch { }
-        return null;
-    }
-
-    private static int Install(string dir)
-    {
-        try
-        {
-            Directory.CreateDirectory(dir);
-            string exePath = Path.Combine(dir, ExeName);
-
-            Log($"Installing {AppName} to {dir}");
-
-            // Stop running instance
-            StopApp(exePath);
-
-            // Get latest version from GitHub API
-            string version = GetLatestVersion();
-            if (string.IsNullOrEmpty(version))
-            {
-                Log("ERROR: Cannot fetch latest version from GitHub API");
-                return 1;
-            }
-
-            Log($"Latest version: {version}");
-
-            // Download the exe
-            string downloadUrl = $"https://github.com/{RepoOwner}/{RepoName}/releases/download/{version}/{ExeName}";
-            string sha256Url = $"https://github.com/{RepoOwner}/{RepoName}/releases/download/{version}/{ExeName}.sha256";
-
-            Log($"Downloading {downloadUrl}");
-            if (!DownloadExe(downloadUrl, exePath))
-            {
-                Log("ERROR: Download failed");
-                return 1;
-            }
-
-            // Verify SHA-256
-            Log("Verifying SHA-256 checksum");
-            if (!VerifySha256(sha256Url, exePath))
-            {
-                Log("ERROR: SHA-256 verification failed");
-                try { File.Delete(exePath); } catch { }
-                return 1;
-            }
-
-            Log("SHA-256 verified");
-
-            // Reset gamma after the new exe is in place
-            RunResetGamma(exePath);
-
-            // Create uninstaller (copy of self)
-            string uninstPath = Path.Combine(dir, UninstName);
-            File.Copy(Assembly.GetExecutingAssembly().Location, uninstPath, true);
-            Log($"Uninstaller created: {uninstPath}");
-
-            // Create shortcuts
-            CreateShortcuts(dir, exePath, uninstPath);
-
-            // Write uninstall registry
-            WriteUninstallRegistry(dir, uninstPath, version);
-
-            Log("Installation complete");
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            Log("Install failed: " + ex.Message);
-            return 1;
-        }
-    }
-
-    private static int Uninstall(string dir)
-    {
-        try
-        {
-            string exePath = Path.Combine(dir, ExeName);
-            string uninstPath = Path.Combine(dir, UninstName);
-
-            Log($"Uninstalling {AppName} from {dir}");
-
-            StopApp(exePath);
-            RunResetGamma(exePath);
-
-            // Remove shortcuts
-            RemoveShortcuts();
-
-            // Delete files
-            TryDelete(uninstPath);
-            TryDelete(exePath);
-            TryDelete(Path.Combine(dir, ExeName + ".sha256"));
-
-            // Remove uninstall registry
-            RemoveUninstallRegistry();
-
-            // Self-delete (uninstaller deletes itself)
-            string self = Assembly.GetExecutingAssembly().Location;
-            if (self.Equals(uninstPath, StringComparison.OrdinalIgnoreCase))
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = $"/c timeout /t 2 /nobreak >nul && del \"{self}\" && rmdir \"{dir}\"",
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    WindowStyle = ProcessWindowStyle.Hidden
-                });
-            }
-
-            Log("Uninstall complete");
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            Log("Uninstall failed: " + ex.Message);
-            return 1;
-        }
-    }
-
-    private static string? GetLatestVersion()
-    {
-        try
-        {
-            string apiUrl = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
-            using var client = new WebClient();
-            client.Headers["User-Agent"] = $"{AppName}-Installer";
-            client.Headers["Accept"] = "application/vnd.github+json";
-            string json = client.DownloadString(apiUrl);
-
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("tag_name", out var tagProp))
-            {
-                return tagProp.GetString();
-            }
-        }
-        catch (Exception ex)
-        {
-            Log("GetLatestVersion error: " + ex.Message);
-        }
-        return null;
-    }
-
-    private static bool DownloadExe(string url, string destPath)
-    {
-        try
-        {
-            using var client = new WebClient();
-            client.Headers["User-Agent"] = $"{AppName}-Installer";
-            client.DownloadFile(url, destPath);
-            return File.Exists(destPath) && new FileInfo(destPath).Length > 0;
-        }
-        catch (Exception ex)
-        {
-            Log("DownloadExe error: " + ex.Message);
-            return false;
-        }
-    }
-
-    private static bool VerifySha256(string sha256Url, string exePath)
-    {
-        try
-        {
-            string expectedHash;
-            using (var client = new WebClient())
-            {
-                client.Headers["User-Agent"] = $"{AppName}-Installer";
-                expectedHash = client.DownloadString(sha256Url).Trim().ToLowerInvariant();
-            }
-
-            using var sha256 = System.Security.Cryptography.SHA256.Create();
-            using var stream = File.OpenRead(exePath);
-            byte[] hashBytes = sha256.ComputeHash(stream);
-            string actualHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-
-            return string.Equals(expectedHash, actualHash, StringComparison.OrdinalIgnoreCase);
-        }
-        catch (Exception ex)
-        {
-            Log("VerifySha256 error: " + ex.Message);
-            return false;
-        }
-    }
-
-    private static void StopApp(string exePath)
-    {
-        try
-        {
-            string exeName = Path.GetFileNameWithoutExtension(exePath);
-            foreach (var p in Process.GetProcessesByName(exeName))
+            catch (ArgumentException) { }
+            for (int attempt = 0; attempt < 30; attempt++)
             {
                 try
                 {
-                    string? pPath = p.MainModule?.FileName;
-                    if (!string.IsNullOrEmpty(pPath) &&
-                        pPath.Equals(exePath, StringComparison.OrdinalIgnoreCase))
-                    {
-                        p.Kill();
-                        p.WaitForExit(3000);
-                    }
+                    File.Delete(args[2]);
+                    string folder = Path.GetDirectoryName(args[2]);
+                    if (Directory.GetFileSystemEntries(folder).Length == 0) Directory.Delete(folder);
+                    var cleanup = new ProcessStartInfo("cmd.exe", "/d /q /c ping 127.0.0.1 -n 3 >nul & del /q \"%TM_SETUP_HELPER%\"") { UseShellExecute = false, CreateNoWindow = true };
+                    cleanup.EnvironmentVariables["TM_SETUP_HELPER"] = Application.ExecutablePath;
+                    Process.Start(cleanup);
+                    return 0;
                 }
-                catch { }
+                catch (IOException) { Thread.Sleep(200); }
             }
+            return 1;
         }
-        catch { }
-    }
-
-    private static void RunResetGamma(string exePath)
-    {
-        try
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+        bool silent = false, uninstall = Path.GetFileName(Application.ExecutablePath).Equals(UninstName, StringComparison.OrdinalIgnoreCase), launch = false;
+        bool? autostart = null;
+        string dir = Path.GetFileName(Application.ExecutablePath).Equals(UninstName, StringComparison.OrdinalIgnoreCase)
+            ? Path.GetDirectoryName(Application.ExecutablePath) : InstalledDirectory();
+        foreach (string arg in args)
         {
-            if (File.Exists(exePath))
+            if (arg.Equals("/S", StringComparison.OrdinalIgnoreCase) || arg.Equals("/install", StringComparison.OrdinalIgnoreCase)) silent = true;
+            else if (arg.Equals("/uninstall", StringComparison.OrdinalIgnoreCase)) uninstall = true;
+            else if (arg.StartsWith("/DIR=", StringComparison.OrdinalIgnoreCase)) dir = arg.Substring(5).Trim('"');
+            else if (arg.Equals("/NOAUTOSTART", StringComparison.OrdinalIgnoreCase)) autostart = false;
+            else if (arg.Equals("/LAUNCH", StringComparison.OrdinalIgnoreCase)) launch = true;
+            else if (arg.Equals("/NOLAUNCH", StringComparison.OrdinalIgnoreCase)) launch = false;
+            else if (!arg.Equals("/DESKTOP", StringComparison.OrdinalIgnoreCase)) return 2;
+        }
+        using (var mutex = new Mutex(false, @"Local\TrayMixer.Setup"))
+        {
+            if (!mutex.WaitOne(0)) return 3;
+            try
             {
-                var psi = new ProcessStartInfo
+                if (uninstall)
                 {
-                    FileName = exePath,
-                    Arguments = "--reset-gamma",
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    WindowStyle = ProcessWindowStyle.Hidden
-                };
-                Process.Start(psi)?.WaitForExit(5000);
+                    if (!silent && MessageBox.Show("Remove TrayMixer? Your preferences will be kept.", "TrayMixer Setup", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return 0;
+                    Uninstall(dir);
+                    if (!silent) MessageBox.Show("TrayMixer has been removed.", "TrayMixer Setup");
+                }
+                else if (silent) Install(dir, autostart ?? DefaultAutostart(dir), launch);
+                else Application.Run(new SetupForm(dir));
+                return 0;
             }
+            catch (Exception ex)
+            {
+                if (!silent) MessageBox.Show(ex.Message, "TrayMixer Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return 1;
+            }
+            finally { mutex.ReleaseMutex(); }
         }
-        catch { }
     }
 
-    private static void CreateShortcuts(string dir, string exePath, string uninstPath)
+    internal static string InstalledDirectory()
     {
+        using (var key = Registry.CurrentUser.OpenSubKey(UninstallKey))
+        {
+            string dir = key == null ? null : key.GetValue("InstallLocation") as string;
+            return string.IsNullOrEmpty(dir) ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName) : dir;
+        }
+    }
+
+    internal static bool DefaultAutostart(string dir)
+    {
+        if (!File.Exists(Path.Combine(dir, ExeName))) return true;
+        using (var key = Registry.CurrentUser.OpenSubKey(RunKey)) return key != null && key.GetValue(AppName) != null;
+    }
+
+    internal static Version VersionOf(string path)
+    {
+        if (!File.Exists(path)) return new Version(0, 0, 0, 0);
+        Version version;
+        return Version.TryParse(FileVersionInfo.GetVersionInfo(path).FileVersion, out version) ? version : new Version(0, 0, 0, 0);
+    }
+
+    internal static string ExtractPayload(string dir)
+    {
+        string path = Path.Combine(dir, "TrayMixer.payload.exe");
+        using (var input = Assembly.GetExecutingAssembly().GetManifestResourceStream("TrayMixer.Payload"))
+        {
+            if (input == null) throw new InvalidOperationException("The installer payload is missing. Download Setup again.");
+            using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write)) input.CopyTo(output);
+        }
+        return path;
+    }
+
+    internal static void Install(string directory, bool autostart, bool launch)
+    {
+        string dir = Path.GetFullPath(directory);
+        string previous = InstalledDirectory();
+        using (var registered = Registry.CurrentUser.OpenSubKey(UninstallKey))
+            if (registered != null && !SamePath(dir, previous)) throw new InvalidOperationException("An installation already exists at " + previous + ". Update it there, or uninstall it before choosing another folder.");
+        Directory.CreateDirectory(dir);
+        string staging = Path.Combine(dir, ".setup-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(staging);
+        string exe = Path.Combine(dir, ExeName), uninstaller = Path.Combine(dir, UninstName);
+        string backup = Path.Combine(staging, "previous.exe");
+        bool replaced = false, keepBackup = false;
+        var snapshot = new InstallSnapshot(dir);
         try
         {
-            // Start Menu shortcut
-            string startMenu = Environment.GetFolderPath(Environment.SpecialFolder.StartMenu);
-            string progMenu = Path.Combine(startMenu, "Programs", AppName);
-            Directory.CreateDirectory(progMenu);
-            CreateShortcut(Path.Combine(progMenu, $"{AppName}.lnk"), exePath, "");
-            CreateShortcut(Path.Combine(progMenu, $"Uninstall {AppName}.lnk"), uninstPath, "/uninstall");
-
-            // Desktop shortcut (optional)
-            string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-            CreateShortcut(Path.Combine(desktop, $"{AppName}.lnk"), exePath, "");
+            string payload = ExtractPayload(staging);
+            if (VersionOf(payload) < VersionOf(exe)) throw new InvalidOperationException("A newer version is installed. Download the latest Setup to update or reinstall it.");
+            // Stage everything before stopping the installed app or touching its files.
+            File.Copy(Application.ExecutablePath, Path.Combine(staging, UninstName));
+            StopApp(exe);
+            ResetGamma(exe);
+            if (File.Exists(exe)) File.Replace(payload, exe, backup);
+            else File.Move(payload, exe);
+            replaced = true;
+            File.Copy(Path.Combine(staging, UninstName), uninstaller, true);
+            CreateShortcuts(dir);
+            using (var key = Registry.CurrentUser.CreateSubKey(UninstallKey))
+            {
+                key.SetValue("DisplayName", AppName);
+                key.SetValue("DisplayVersion", VersionOf(exe).ToString(3));
+                key.SetValue("Publisher", "sailxx");
+                key.SetValue("InstallLocation", dir);
+                key.SetValue("DisplayIcon", exe);
+                key.SetValue("UninstallString", Quote(uninstaller) + " /uninstall");
+                key.SetValue("QuietUninstallString", Quote(uninstaller) + " /uninstall /S");
+                key.SetValue("NoModify", 1);
+                key.SetValue("NoRepair", 1);
+                key.DeleteValue("SystemComponent", false);
+            }
+            using (var key = Registry.CurrentUser.CreateSubKey(RunKey))
+            {
+                if (autostart) key.SetValue(AppName, Quote(exe));
+                else key.DeleteValue(AppName, false);
+            }
+            // Prevent the app's first-run default from overriding the installer's choice.
+            using (var key = Registry.CurrentUser.CreateSubKey(ConfigKey)) key.SetValue("Initialized", 1);
         }
-        catch (Exception ex)
+        catch
         {
-            Log("CreateShortcuts error: " + ex.Message);
+            if (replaced)
+            {
+                try { snapshot.Restore(); }
+                catch { keepBackup = true; throw; }
+            }
+            throw;
         }
+        finally { if (!keepBackup) Directory.Delete(staging, true); }
+        if (launch) Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true });
     }
 
-    private static void RemoveShortcuts()
+    internal static void Uninstall(string directory)
     {
+        string dir = Path.GetFullPath(directory), exe = Path.Combine(dir, ExeName);
+        using (var registered = Registry.CurrentUser.OpenSubKey(UninstallKey))
+            if (registered != null && !SamePath(dir, InstalledDirectory())) throw new InvalidOperationException("Uninstall must use the registered installation folder.");
+        StopApp(exe);
+        ResetGamma(exe);
+        File.Delete(exe);
+        File.Delete(Path.Combine(dir, ExeName + ".sha256"));
+        File.Delete(Path.Combine(Desktop, AppName + ".lnk"));
+        File.Delete(Path.Combine(Menu, AppName + ".lnk"));
+        File.Delete(Path.Combine(Menu, "Uninstall " + AppName + ".lnk"));
+        if (Directory.Exists(Menu) && Directory.GetFileSystemEntries(Menu).Length == 0) Directory.Delete(Menu);
+        using (var key = Registry.CurrentUser.OpenSubKey(RunKey, true))
+            if (key != null) key.DeleteValue(AppName, false);
+        Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false);
+        string self = Path.Combine(dir, UninstName);
+        if (SamePath(Application.ExecutablePath, self))
+        {
+            // A separate helper waits for this process, then removes only the uninstaller.
+            string helper = Path.Combine(Path.GetTempPath(), "TrayMixer-clean-" + Guid.NewGuid().ToString("N") + ".exe");
+            File.Copy(self, helper);
+            Process.Start(new ProcessStartInfo(helper, "/cleanup " + Process.GetCurrentProcess().Id + " " + Quote(self)) { UseShellExecute = false });
+        }
+        else File.Delete(self);
+        if (Directory.Exists(dir) && Directory.GetFileSystemEntries(dir).Length == 0) Directory.Delete(dir);
+    }
+
+    internal static bool SamePath(string a, string b) { return string.Equals(Path.GetFullPath(a).TrimEnd('\\'), Path.GetFullPath(b).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase); }
+    internal static string Quote(string value) { return "\"" + value + "\""; }
+
+    private static void StopApp(string exe)
+    {
+        foreach (var process in Process.GetProcessesByName(AppName))
+            using (process)
+            {
+                try
+                {
+                    if (!SamePath(process.MainModule.FileName, exe)) continue;
+                }
+                catch (System.ComponentModel.Win32Exception) { continue; }
+                process.Kill();
+                if (!process.WaitForExit(10000)) throw new IOException("TrayMixer is still running. Close it and try again.");
+            }
+    }
+
+    private static void ResetGamma(string exe)
+    {
+        if (!File.Exists(exe)) return;
+        using (var process = Process.Start(new ProcessStartInfo(exe, "--reset-gamma") { UseShellExecute = false, CreateNoWindow = true }))
+            if (!process.WaitForExit(10000)) { process.Kill(); throw new IOException("TrayMixer did not finish resetting the display. Try again."); }
+    }
+
+    private static void CreateShortcuts(string dir)
+    {
+        Directory.CreateDirectory(Menu);
+        CreateShortcut(Path.Combine(Menu, AppName + ".lnk"), Path.Combine(dir, ExeName), "");
+        CreateShortcut(Path.Combine(Menu, "Uninstall " + AppName + ".lnk"), Path.Combine(dir, UninstName), "/uninstall");
+        CreateShortcut(Path.Combine(Desktop, AppName + ".lnk"), Path.Combine(dir, ExeName), "");
+    }
+
+    private static void CreateShortcut(string path, string target, string args)
+    {
+        Type type = Type.GetTypeFromProgID("WScript.Shell", true);
+        dynamic shell = Activator.CreateInstance(type);
+        dynamic shortcut = shell.CreateShortcut(path);
         try
         {
-            string startMenu = Environment.GetFolderPath(Environment.SpecialFolder.StartMenu);
-            string progMenu = Path.Combine(startMenu, "Programs", AppName);
-            TryDelete(Path.Combine(progMenu, $"{AppName}.lnk"));
-            TryDelete(Path.Combine(progMenu, $"Uninstall {AppName}.lnk"));
-            TryDelete(progMenu); // remove folder if empty
-
-            string desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-            TryDelete(Path.Combine(desktop, $"{AppName}.lnk"));
+            shortcut.TargetPath = target;
+            shortcut.Arguments = args;
+            shortcut.WorkingDirectory = Path.GetDirectoryName(target);
+            shortcut.IconLocation = target + ",0";
+            shortcut.Save();
         }
-        catch { }
-    }
-
-    private static void CreateShortcut(string lnkPath, string targetPath, string arguments)
-    {
-        Type? shellType = Type.GetTypeFromProgID("WScript.Shell");
-        if (shellType == null) return;
-        dynamic shell = Activator.CreateInstance(shellType);
-        dynamic shortcut = shell.CreateShortcut(lnkPath);
-        shortcut.TargetPath = targetPath;
-        shortcut.Arguments = arguments;
-        shortcut.WorkingDirectory = Path.GetDirectoryName(targetPath) ?? "";
-        shortcut.Save();
-    }
-
-    private static void WriteUninstallRegistry(string dir, string uninstPath, string version)
-    {
-        try
+        finally
         {
-            string keyPath = $@"Software\Microsoft\Windows\CurrentVersion\Uninstall\{AppName}";
-            using var key = Registry.CurrentUser.CreateSubKey(keyPath);
-            key.SetValue("DisplayName", AppName);
-            key.SetValue("DisplayVersion", version.TrimStart('v'));
-            key.SetValue("Publisher", RepoOwner);
-            key.SetValue("UninstallString", $"\"{uninstPath}\" /uninstall");
-            key.SetValue("InstallLocation", dir);
-            key.SetValue("NoModify", 1);
-            key.SetValue("NoRepair", 1);
-            key.SetValue("SystemComponent", 1); // hide from "Apps & features" list clutter
+            System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);
+            System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell);
         }
-        catch (Exception ex)
-        {
-            Log("WriteUninstallRegistry error: " + ex.Message);
-        }
-    }
-
-    private static void RemoveUninstallRegistry()
-    {
-        try
-        {
-            string keyPath = $@"Software\Microsoft\Windows\CurrentVersion\Uninstall\{AppName}";
-            Registry.CurrentUser.DeleteSubKeyTree(keyPath, false);
-        }
-        catch { }
-    }
-
-    private static void TryDelete(string path)
-    {
-        try
-        {
-            if (File.Exists(path)) File.Delete(path);
-            else if (Directory.Exists(path)) Directory.Delete(path, true);
-        }
-        catch { }
-    }
-
-    private static void Log(string msg)
-    {
-        string logPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            AppName, "install.log");
-        try
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
-            File.AppendAllText(logPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {msg}\n");
-        }
-        catch { }
-        Console.WriteLine(msg);
     }
 }

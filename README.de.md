@@ -6,7 +6,7 @@
 
 <img src="assets/readme/hero-de.svg" width="100%" alt="TrayMixer — Lautstärke jedes Geräts und jeder App in einem Windows-11-Fenster">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-de.svg" height="52" alt="Für Windows 11 herunterladen"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe"><img src="assets/readme/cta-de.svg" height="52" alt="Für Windows 11 herunterladen"></a>
 
 </div>
 
@@ -66,8 +66,9 @@ Get-FileHash .\TrayMixer.exe -Algorithm SHA256
 
 ## Installation
 
-1. Lade [`TrayMixer.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe) herunter und lege sie in einen festen Ordner, z. B. `%LOCALAPPDATA%\TrayMixer`.
-2. Starte sie. Das Symbol erscheint im Tray, der Autostart schaltet sich selbst ein (abschaltbar im Menü).
+1. Lade [`TrayMixer-Setup.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe) herunter und starte Setup.
+2. Wähle Ordner und Autostart. Desktop- und Startmenü-Verknüpfungen werden automatisch erstellt.
+3. Starte das neue Setup zum Aktualisieren oder dasselbe Setup zum Neuinstallieren. Einstellungen bleiben erhalten; keine Internetverbindung erforderlich.
 
 ## Code signing policy
 

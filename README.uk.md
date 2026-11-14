@@ -6,7 +6,7 @@
 
 <img src="assets/readme/hero-uk.svg" width="100%" alt="TrayMixer — гучність кожного пристрою й застосунку в одному вікні Windows 11">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-uk.svg" height="52" alt="Завантажити для Windows 11"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe"><img src="assets/readme/cta-uk.svg" height="52" alt="Завантажити для Windows 11"></a>
 
 </div>
 
@@ -66,8 +66,9 @@ Get-FileHash .\TrayMixer.exe -Algorithm SHA256
 
 ## Встановлення
 
-1. Завантажте [`TrayMixer.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe) і покладіть у постійну папку, наприклад `%LOCALAPPDATA%\TrayMixer`.
-2. Запустіть. Значок з’явиться в треї, автозапуск увімкнеться сам (вимикається в меню).
+1. Завантажте [`TrayMixer-Setup.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe) і запустіть.
+2. Виберіть папку та автозапуск. Ярлики на робочому столі й у меню «Пуск» створюються автоматично.
+3. Для оновлення запустіть Setup нового релізу, для перевстановлення — тієї самої версії. Налаштування зберігаються; інтернет не потрібний.
 
 ## Code signing policy
 

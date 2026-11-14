@@ -6,7 +6,7 @@
 
 <img src="assets/readme/hero-tr.svg" width="100%" alt="TrayMixer — her cihazın ve uygulamanın sesi tek bir Windows 11 penceresinde">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-tr.svg" height="52" alt="Windows 11 için indir"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe"><img src="assets/readme/cta-tr.svg" height="52" alt="Windows 11 için indir"></a>
 
 </div>
 
@@ -66,8 +66,9 @@ Get-FileHash .\TrayMixer.exe -Algorithm SHA256
 
 ## Kurulum
 
-1. [`TrayMixer.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe) dosyasını indirin ve kalıcı bir klasöre koyun, örneğin `%LOCALAPPDATA%\TrayMixer`.
-2. Çalıştırın. Simge tepside görünür ve otomatik başlatma kendiliğinden açılır (menüden kapatılabilir).
+1. [`TrayMixer-Setup.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe) dosyasını indirin ve çalıştırın.
+2. Klasörü ve otomatik başlatmayı seçin. Setup masaüstü ve Başlat menüsü kısayollarını oluşturur.
+3. Güncellemek için yeni Setup dosyasını, yeniden kurmak için aynı dosyayı çalıştırın. Ayarlar korunur; internet gerekmez.
 
 ## Code signing policy
 

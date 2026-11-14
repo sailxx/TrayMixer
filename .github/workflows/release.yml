@@ -5,8 +5,8 @@ on:
     tags: ['v*']
 
 permissions:
-  contents: write       # create the release
-  id-token: write       # sign build provenance
+  contents: write
+  id-token: write
   attestations: write
 
 jobs:
@@ -19,18 +19,26 @@ jobs:
       - name: Build
         shell: cmd
         run: build.cmd
-      - name: SHA-256
+      - name: Test installer
+        shell: cmd
+        run: installer\test.cmd
+      - name: Validate release version
         shell: pwsh
         run: |
-          $h = Get-FileHash TrayMixer-Setup.exe -Algorithm SHA256
-          $h.Hash | Out-File -Encoding ascii TrayMixer-Setup.exe.sha256
-          $h2 = Get-FileHash TrayMixer.exe -Algorithm SHA256
-          $h2.Hash | Out-File -Encoding ascii TrayMixer.exe.sha256
+          $version = [version](Get-Item TrayMixer.exe).VersionInfo.FileVersion
+          if ($env:GITHUB_REF_NAME -ne "v$($version.ToString(3))") { throw "Release tag must match the app version" }
+      - name: Attest installer
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: TrayMixer-Setup.exe
+      - name: Installer checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash TrayMixer-Setup.exe -Algorithm SHA256).Hash
+          "### SHA-256`n``````text`n$hash  TrayMixer-Setup.exe`n``````" | Set-Content release-notes.md
       - name: Release
         uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
         with:
-          files: |
-            TrayMixer-Setup.exe
-            TrayMixer-Setup.exe.sha256
-            TrayMixer.exe
-            TrayMixer.exe.sha256
+          body_path: release-notes.md
+          files: TrayMixer-Setup.exe
+          fail_on_unmatched_files: true

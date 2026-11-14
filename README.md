@@ -6,7 +6,7 @@
 
 <img src="assets/readme/hero-en.svg" width="100%" alt="TrayMixer — volume for every device and app in one Windows 11 flyout">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-en.svg" height="52" alt="Download for Windows 11"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe"><img src="assets/readme/cta-en.svg" height="52" alt="Download for Windows 11"></a>
 
 </div>
 
@@ -14,7 +14,7 @@
 
 <img src="assets/readme/screenshot.png" width="100%" alt="TrayMixer flyout: headphones, speakers, browser and system sounds on one screen">
 
-The Windows 11 volume mixer is buried in Settings, and the tray volume icon controls just one device. **TrayMixer** is one click away: every pair of headphones, every speaker, every monitor and every app, each with its own slider. No installer, no ads, no background load.
+The Windows 11 volume mixer is buried in Settings, and the tray volume icon controls just one device. **TrayMixer** is one click away: every pair of headphones, every speaker, every monitor and every app, each with its own slider. No ads, no background load.
 
 <br>
 
@@ -37,7 +37,7 @@ The Windows 11 volume mixer is buried in Settings, and the tray volume icon cont
 </details>
 
 > [!NOTE]
-> The TrayMixer interface is in Russian.
+> The TrayMixer interface and Setup are in English.
 
 <br>
 
@@ -48,32 +48,55 @@ The Windows 11 volume mixer is buried in Settings, and the tray volume icon cont
 <img src="assets/readme/security-en.svg" width="100%" alt="Security: no admin rights, no network, DLL hijacking protection, verifiable builds">
 
 <details>
-<summary><b>How to verify the exe was built from this code</b></summary>
+<summary><b>How to verify the installer was built from this code</b></summary>
 
 Every release is built by GitHub Actions straight from source, and GitHub signs the build provenance:
 
 ```bash
-gh attestation verify TrayMixer.exe --repo sailxx/TrayMixer
+gh attestation verify TrayMixer-Setup.exe --repo sailxx/TrayMixer
 ```
 
-A SHA-256 checksum ships next to the exe in every release (`TrayMixer.exe.sha256`):
+Each release contains only `TrayMixer-Setup.exe`. Its SHA-256 checksum is included in the release description:
 
 ```powershell
-Get-FileHash .\TrayMixer.exe -Algorithm SHA256
+Get-FileHash .\TrayMixer-Setup.exe -Algorithm SHA256
 ```
 
 </details>
 
 ## Install
 
-1. Download [`TrayMixer.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe) and put it in a permanent folder, e.g. `%LOCALAPPDATA%\TrayMixer`.
-2. Run it. The icon appears in the tray and autostart turns on by itself (toggle it in the menu).
+1. Download [`TrayMixer-Setup.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe) and run it.
+2. Choose the install folder (default: `%LOCALAPPDATA%\TrayMixer`).
+3. Setup installs the bundled app without an internet connection and creates desktop and Start menu shortcuts. Choose whether to enable autostart and launch the app.
+
+To update, download Setup from the latest release and run it again. Setup offers **Update** for an older installation or **Reinstall** for the same version, preserves preferences and the autostart choice, and refuses to downgrade a newer installation. Remove TrayMixer through Windows Installed apps; preferences are kept.
+
+Silent installation: `TrayMixer-Setup.exe /S /NOLAUNCH`. Optional: `/DIR="C:\path\TrayMixer"`, `/NOAUTOSTART`, `/LAUNCH`. Silent removal: `Uninstall.exe /uninstall /S`.
 
 ## Code signing policy
 
-Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+The installer and bundled app are **unsigned**. Windows SmartScreen may display a warning; verify the release source and checksum before running Setup.
 
-- **What is signed:** only the official `TrayMixer.exe` that GitHub Actions builds from this repository when a `v*` tag is pushed (see `.github/workflows/release.yml`). Builds from forks, branches or local machines are never signed.
-- **Team roles:** committer, reviewer and approver of every signing request — [@sailxx](https://github.com/sailxx). Two-factor authentication is required for the GitHub and SignPath accounts.
-- **Privacy:** this program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
-- **Verification:** besides the signature, every release carries a SHA-256 file and a GitHub build provenance attestation (`gh attestation verify TrayMixer.exe --repo sailxx/TrayMixer`).
+GitHub Actions builds every release from source and publishes **build provenance** (SLSA level 1). Anyone can verify the artifact matches the source:
+
+```bash
+gh attestation verify TrayMixer-Setup.exe --repo sailxx/TrayMixer
+```
+
+## Build from source
+
+Requires Windows with the .NET Framework 4.x C# compiler (included in Windows 11). No SDK or package downloads are needed.
+
+```cmd
+cd /d C:\path\to\TrayMixer
+build.cmd
+```
+
+This builds the app locally and embeds it in `TrayMixer-Setup.exe`, the only release asset.
+
+The installer source is in `installer/Setup.cs`.
+
+## License
+
+Apache-2.0 — see [`LICENSE`](LICENSE).
