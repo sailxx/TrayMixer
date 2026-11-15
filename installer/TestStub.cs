@@ -7,5 +7,12 @@
 #endif
 internal static class TestStub
 {
-    private static int Main(string[] args) { return 0; }
+    private static int Main(string[] args)
+    {
+#if RESET_FAIL
+        return args.Length > 0 && args[0] == "--reset-gamma" ? 1 : 0;
+#else
+        return 0;
+#endif
+    }
 }

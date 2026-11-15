@@ -1063,7 +1063,7 @@ namespace TrayMixer
             if (args.Length > 1 && args[0] == "--make-icon" && args[1].EndsWith(".ico", StringComparison.OrdinalIgnoreCase)) { Art.WriteIco(args[1]); return; }
             if (args.Length > 1 && args[0] == "--render" && args[1].EndsWith(".png", StringComparison.OrdinalIgnoreCase)) { var p = new Popup(Popup.Mica, scale); p.CreateControl(); p.RenderTo(args[1], Color.FromArgb(32, 32, 32)); return; }
             // Used by the uninstaller: put the screens back to normal gamma after the process was killed, then quit
-            if (args.Length > 0 && args[0] == "--reset-gamma") { BlueLight.Reset(); return; }
+            if (args.Length > 0 && args[0] == "--reset-gamma") { Environment.ExitCode = BlueLight.Reset() ? 0 : 1; return; }
             bool created;
             using (new Mutex(true, @"Local\TrayMixer_7c1f3e2a-5b0d-4f9e-9a61-2d8c4b7e1a90", out created))
             {

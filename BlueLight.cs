@@ -55,11 +55,11 @@ namespace TrayMixer
         }
 
         // Give the screens their normal gamma back (on exit)
-        public static void Reset()
+        public static bool Reset()
         {
             stopped = true;
             var g = guard; if (g != null) g.Dispose();
-            RestoreNormal();
+            return RestoreNormal();
         }
 
         static string GammaName(string name) { return "GammaOriginal_" + name; }
@@ -77,21 +77,22 @@ namespace TrayMixer
             using (var k = Registry.CurrentUser.CreateSubKey(CfgKey)) k.SetValue(GammaName(name), bytes, RegistryValueKind.Binary);
         }
 
-        static void RestoreNormal()
+        static bool RestoreNormal()
         {
             lock (io)
             {
                 bool restored = true;
                 if (touched || dirtyFlag || Theme.RegInt(CfgKey, DirtyValue, 0) == 1)
-                    ForEachScreen((dc, name) => {
+                    restored = ForEachScreen((dc, name) => {
                         ushort[] saved;
                         if (!original.TryGetValue(name, out saved)) saved = LoadOriginal(name);
                         if (saved != null) {
                             if (!Native.SetDeviceGammaRamp(dc, saved)) { restored = false; return; }
                             using (var k = Registry.CurrentUser.CreateSubKey(CfgKey)) k.DeleteValue(GammaName(name), false);
                         }
-                    });
+                    }) && restored;
                 touched = !restored; applied.Clear(); SetDirty(!restored);
+                return restored;
             }
         }
 
@@ -234,22 +235,25 @@ namespace TrayMixer
             return true;
         }
 
-        static void ForEachScreen(Action<IntPtr, string> f)
+        static bool ForEachScreen(Action<IntPtr, string> f)
         {
             var names = new List<string>();
-            Native.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr hMon, IntPtr hdc, IntPtr rc, IntPtr data) =>
+            bool success = true;
+            bool enumerated = Native.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr hMon, IntPtr hdc, IntPtr rc, IntPtr data) =>
             {
                 var mi = new Native.MONITORINFOEX { cbSize = Marshal.SizeOf(typeof(Native.MONITORINFOEX)) };
                 if (Native.GetMonitorInfo(hMon, ref mi)) names.Add(mi.szDevice);
+                else success = false;
                 return true;
             }, IntPtr.Zero);
             foreach (var n in names)
             {
                 IntPtr dc = Native.CreateDC("DISPLAY", n, null, IntPtr.Zero);
-                if (dc == IntPtr.Zero) continue;
-                try { f(dc, n); } catch { }
+                if (dc == IntPtr.Zero) { success = false; continue; }
+                try { f(dc, n); } catch { success = false; }
                 finally { Native.DeleteDC(dc); }
             }
+            return enumerated && success && names.Count > 0;
         }
     }
 

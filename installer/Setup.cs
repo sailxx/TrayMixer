@@ -233,7 +233,10 @@ internal static class Program
     {
         if (!File.Exists(exe)) return;
         using (var process = Process.Start(new ProcessStartInfo(exe, "--reset-gamma") { UseShellExecute = false, CreateNoWindow = true }))
-            if (!process.WaitForExit(10000)) { process.Kill(); throw new IOException(SetupLanguage.T("TrayMixer did not finish resetting the display. Try again.", "TrayMixer не завершил восстановление экрана. Повторите попытку.")); }
+        {
+            if (!process.WaitForExit(10000)) { process.Kill(); process.WaitForExit(); throw new IOException(SetupLanguage.T("TrayMixer did not finish resetting the display. Try again.", "TrayMixer не завершил восстановление экрана. Повторите попытку.")); }
+            if (process.ExitCode != 0) throw new IOException(SetupLanguage.T("TrayMixer could not restore the display. Your installation has been kept. Try again.", "TrayMixer не удалось восстановить экран. Установленная программа сохранена. Повторите попытку."));
+        }
     }
 
     private static void CreateShortcuts(string dir)

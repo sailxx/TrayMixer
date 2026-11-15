@@ -85,6 +85,21 @@ internal static class InstallerTests
             finally { Program.Menu = originalMenu; }
             Check(rollbackTriggered && Program.VersionOf(exe).Major == 1 && !Program.DefaultAutostart(app), "failed update rolls back app and startup choice");
             using (var reg = Registry.CurrentUser.OpenSubKey(Program.UninstallKey)) Check((string)reg.GetValue("DisplayVersion") == "2.6.0", "failed update preserves registration");
+            // Failed recovery must preserve the installation for a later retry.
+            File.Copy(Path.Combine(Path.GetDirectoryName(stub), "FailingResetStub.exe"), exe, true);
+            byte[] beforeFailure = File.ReadAllBytes(exe);
+            bool resetUpdateRefused = false;
+            try { Program.Install(app, true, false); }
+            catch (IOException) { resetUpdateRefused = true; }
+            Check(resetUpdateRefused && Convert.ToBase64String(File.ReadAllBytes(exe)) == Convert.ToBase64String(beforeFailure), "failed gamma reset prevents app replacement");
+            Check(!Program.DefaultAutostart(app), "failed gamma reset preserves startup choice");
+            Check(Directory.GetDirectories(app, ".setup-*").Length == 0, "failed gamma reset cleans staging");
+            bool resetUninstallRefused = false;
+            try { Program.Uninstall(app); }
+            catch (IOException) { resetUninstallRefused = true; }
+            Check(resetUninstallRefused && File.Exists(exe) && File.Exists(Path.Combine(app, "Uninstall.exe")), "failed gamma reset prevents uninstall");
+            Check(File.Exists(Path.Combine(Program.Desktop, "TrayMixer.lnk")) && File.Exists(Path.Combine(Program.Menu, "TrayMixer.lnk")), "failed gamma reset preserves shortcuts");
+            using (var reg = Registry.CurrentUser.OpenSubKey(Program.UninstallKey)) Check(reg != null && (string)reg.GetValue("DisplayVersion") == "2.6.0", "failed gamma reset preserves registration");
             // Use harmless test executable for the uninstall reset switch, too.
             File.Copy(stub, exe, true);
             Program.Uninstall(app);
