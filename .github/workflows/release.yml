@@ -28,7 +28,7 @@ jobs:
           $version = [version](Get-Item TrayMixer.exe).VersionInfo.FileVersion
           if ($env:GITHUB_REF_NAME -ne "v$($version.ToString(3))") { throw "Release tag must match the app version" }
       - name: Attest installer
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: TrayMixer-Setup.exe
       - name: Installer checksum
