@@ -18,8 +18,8 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyTitle("TrayMixer")]
 [assembly: System.Reflection.AssemblyProduct("TrayMixer")]
 [assembly: System.Reflection.AssemblyDescription("Lightweight Windows 11 tray volume mixer")]
-[assembly: System.Reflection.AssemblyVersion("2.5.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("2.5.0.0")]
+[assembly: System.Reflection.AssemblyVersion("2.9.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("2.9.0.0")]
 
 namespace TrayMixer
 {
@@ -427,10 +427,7 @@ namespace TrayMixer
         void Place(int w, int h)
         {
             var scr = Screen.FromPoint(Cursor.Position);
-            var wa = scr.WorkingArea; int m = S(12);
-            int x = wa.Left > scr.Bounds.Left ? wa.Left + m : wa.Right - w - m;
-            int y = wa.Top > scr.Bounds.Top ? wa.Top + m : wa.Bottom - h - m;
-            SetBounds(x, Math.Max(wa.Top, y), w, h);
+            Bounds = FlyoutPlacement.Bounds(scr.Bounds, scr.WorkingArea, new Size(w, h), S(12));
         }
 
         // ── Row geometry (compact: icon on the left, title above the slider) ──
@@ -739,6 +736,156 @@ namespace TrayMixer
         public int OnNotify(IntPtr data) { Post(VolumeChanged); return 0; }
     }
 
+    // Shared placement keeps both tray panels clear of the taskbar on every edge.
+    static class FlyoutPlacement
+    {
+        internal static Rectangle Bounds(Rectangle screen, Rectangle work, Size size, int gap)
+        {
+            int x = work.Left > screen.Left ? work.Left + gap : work.Right - size.Width - gap;
+            int y = work.Top > screen.Top ? work.Top + gap : work.Bottom - size.Height - gap;
+            return new Rectangle(Math.Max(work.Left, x), Math.Max(work.Top, y), size.Width, size.Height);
+        }
+    }
+
+    // ToolStrip supplies keyboard navigation, accessibility and submenu lifetime;
+    // the existing MenuItem model remains the single source of actions and checks.
+    sealed class TrayFlyout : ContextMenuStrip
+    {
+        readonly ContextMenu model;
+        readonly float scale;
+        Font menuFont;
+        Theme theme;
+        internal TrayFlyout(ContextMenu model, float scale)
+        {
+            this.model = model; this.scale = scale;
+            AutoSize = true; ShowImageMargin = false; ShowCheckMargin = false;
+            DropShadowEnabled = true;
+        }
+        int S(float v) { return (int)Math.Round(v * scale); }
+        internal void RefreshItems()
+        {
+            theme = Theme.Load();
+            ClearItems(Items);
+            if (menuFont != null) menuFont.Dispose();
+            menuFont = new Font(Theme.FontName, S(14), GraphicsUnit.Pixel);
+            Style(this);
+            Populate(Items, model.MenuItems);
+        }
+        void Style(ToolStripDropDown menu)
+        {
+            menu.Font = menuFont;
+            menu.Padding = new Padding(S(6));
+            menu.BackColor = theme.Light ? Color.FromArgb(243, 243, 243) : Color.FromArgb(32, 32, 32);
+            menu.ForeColor = theme.Fg;
+            menu.Renderer = new FlyoutRenderer(theme, scale);
+            menu.MinimumSize = new Size(S(256), 0);
+            menu.Opened -= RoundWindow;
+            menu.Opened += RoundWindow;
+            var drop = menu as ToolStripDropDownMenu;
+            if (drop != null) { drop.ShowImageMargin = false; drop.ShowCheckMargin = false; }
+        }
+        void RoundWindow(object sender, EventArgs e)
+        {
+            var menu = (ToolStripDropDown)sender;
+            int round = 2, dark = theme.Light ? 0 : 1;
+            Native.DwmSetWindowAttribute(menu.Handle, 33, ref round, 4);
+            Native.DwmSetWindowAttribute(menu.Handle, 20, ref dark, 4);
+        }
+        static void ClearItems(ToolStripItemCollection items)
+        {
+            while (items.Count > 0) { var item = items[0]; items.RemoveAt(0); item.Dispose(); }
+        }
+        void Populate(ToolStripItemCollection target, Menu.MenuItemCollection source)
+        {
+            foreach (MenuItem item in source)
+            {
+                if (!item.Visible) continue;
+                if (item.Text == "-") { target.Add(new ToolStripSeparator { AutoSize = false, Height = S(9), Width = S(232) }); continue; }
+                var action = item;
+                var row = new ToolStripMenuItem(item.Text) {
+                    Enabled = item.Enabled, Checked = item.Checked, CheckOnClick = false,
+                    AutoSize = false, Size = new Size(Math.Max(S(244), Math.Min(S(420), TextRenderer.MeasureText(item.Text, menuFont).Width + S(60))), S(30)),
+                    Padding = new Padding(S(26), 0, S(22), 0),
+                    AccessibleName = item.Text
+                };
+                if (item.MenuItems.Count > 0)
+                {
+                    Style(row.DropDown);
+                    Populate(row.DropDownItems, item.MenuItems);
+                    row.DropDownOpening += delegate {
+                        ClearItems(row.DropDownItems);
+                        Populate(row.DropDownItems, action.MenuItems);
+                    };
+                }
+                else row.Click += delegate { action.PerformClick(); };
+                target.Add(row);
+                var owner = row.Owner as ToolStripDropDown;
+                if (owner != null) owner.MinimumSize = new Size(Math.Max(owner.MinimumSize.Width, row.Width + S(12)), 0);
+            }
+        }
+        internal void ShowFlyout()
+        {
+            RefreshItems();
+            var screen = Screen.FromPoint(Cursor.Position);
+            var bounds = FlyoutPlacement.Bounds(screen.Bounds, screen.WorkingArea, GetPreferredSize(Size.Empty), S(12));
+            Show(bounds.Location);
+            Native.SetForegroundWindow(Handle);
+        }
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if (disposing && menuFont != null) { menuFont.Dispose(); menuFont = null; }
+        }
+        sealed class FlyoutRenderer : ToolStripProfessionalRenderer
+        {
+            readonly Theme t; readonly float s;
+            int S(float v) { return (int)Math.Round(v * s); }
+            internal FlyoutRenderer(Theme t, float s) { this.t = t; this.s = s; RoundedEdges = false; }
+            protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e) { e.Graphics.Clear(e.ToolStrip.BackColor); }
+            protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
+            {
+                using (var p = new Pen(t.Sep)) e.Graphics.DrawRectangle(p, 0, 0, e.ToolStrip.Width - 1, e.ToolStrip.Height - 1);
+            }
+            protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+            {
+                var checkedItem = e.Item as ToolStripMenuItem;
+                if (checkedItem != null && checkedItem.Checked)
+                    using (var pen = new Pen(t.Accent, Math.Max(1, S(1.5f)))) {
+                        int y = e.Item.Height / 2;
+                        e.Graphics.DrawLines(pen, new[] { new Point(S(9), y), new Point(S(12), y + S(3)), new Point(S(18), y - S(4)) });
+                    }
+                if (!e.Item.Selected || !e.Item.Enabled) return;
+                var r = new RectangleF(0, 1, e.Item.Width, e.Item.Height - 2);
+                using (var p = new GraphicsPath())
+                using (var b = new SolidBrush(t.Hover))
+                {
+                    float d = S(8);
+                    p.AddArc(r.Left, r.Top, d, d, 180, 90); p.AddArc(r.Right-d, r.Top, d, d, 270, 90);
+                    p.AddArc(r.Right-d, r.Bottom-d, d, d, 0, 90); p.AddArc(r.Left, r.Bottom-d, d, d, 90, 90); p.CloseFigure();
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias; e.Graphics.FillPath(b, p);
+                }
+            }
+            protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+            {
+                GdiText.Draw(e.Graphics, e.Text, e.TextFont, e.Item.Enabled ? t.Fg : t.Sub,
+                    new RectangleF(S(28), 0, e.Item.Width - S(52), e.Item.Height), StringAlignment.Near);
+            }
+            protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
+            {
+                using (var p = new Pen(t.Sep)) e.Graphics.DrawLine(p, S(8), e.Item.Height / 2, e.Item.Width - S(8), e.Item.Height / 2);
+            }
+            protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e) { e.ArrowColor = t.Sub; base.OnRenderArrow(e); }
+            protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e)
+            {
+                using (var p = new Pen(t.Accent, Math.Max(1, S(1.5f)))) {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    int y = e.Item.Height / 2;
+                    e.Graphics.DrawLines(p, new[] { new Point(S(9), y), new Point(S(12), y + S(3)), new Point(S(18), y - S(4)) });
+                }
+            }
+        }
+    }
+
     // ───────────────────────── Tray ─────────────────────────
     class TrayApp
     {
@@ -756,21 +903,21 @@ namespace TrayMixer
             popup.CreateControl(); GC.KeepAlive(popup.Handle); // the window is needed right away: notifications arrive through it
 
             try { Native.SetPreferredAppMode(1); Native.FlushMenuThemes(); } catch { } // dark context menu
+            var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            string verStr = "TrayMixer " + ver.Major + "." + ver.Minor + "." + ver.Build;
             micaItem = new MenuItem("Background: Mica", delegate { SetBackdrop(Popup.Mica); }) { RadioCheck = true };
             acrylicItem = new MenuItem("Background: Acrylic", delegate { SetBackdrop(Popup.Acrylic); }) { RadioCheck = true };
             autoItem = new MenuItem("Run at Windows startup", delegate { ToggleAutostart(); }) { Checked = IsAutostart() };
             var hiddenItem = new MenuItem("Hidden", new[] { new MenuItem("-") });
             hiddenItem.Popup += delegate { FillHidden(hiddenItem); };
-            icon.ContextMenu = new ContextMenu(new[]
-            {
-                new MenuItem("Sound settings", delegate { Open("ms-settings:sound"); }),
-                new MenuItem("Windows volume mixer", delegate { Open("ms-settings:apps-volume"); }),
-                new MenuItem("-"), hiddenItem,
-                new MenuItem("-"), micaItem, acrylicItem,
-                new MenuItem("-"), autoItem,
-                new MenuItem("Exit", delegate { icon.Visible = false; BlueLight.Reset(); Application.Exit(); })
-            });
-            icon.MouseClick += OnTrayClick;
+            var menuModel = CreateTrayMenu(verStr, hiddenItem, micaItem, acrylicItem, autoItem,
+                () => Open("ms-settings:sound"), () => Open("ms-settings:apps-volume"),
+                () => { icon.Visible = false; BlueLight.Reset(); Application.Exit(); });
+            var flyout = new TrayFlyout(menuModel, scale);
+            icon.MouseClick += delegate(object sender, MouseEventArgs e) {
+                if (e.Button == MouseButtons.Right) { popup.HidePopup(); FillHidden(hiddenItem); flyout.ShowFlyout(); }
+                else { flyout.Close(); OnTrayClick(sender, e); }
+            };
             UpdateChecks();
 
             notifier = new Notifier(popup)
@@ -780,10 +927,27 @@ namespace TrayMixer
             };
             try { Audio.En.RegisterEndpointNotificationCallback(notifier); } catch { }
             Rebind();
+            icon.Visible = true;        // the icon appears first, the rest of the startup work follows
             Brightness.ScanAsync(null); // warm up the screen list before the first open
             BlueLight.Start();          // restore the blue light filter and dimming from the last run
-            icon.Visible = true;
             Native.Trim();
+        }
+
+        // Keep frequent actions at the top level; less frequent preferences share one submenu.
+        internal static ContextMenu CreateTrayMenu(string version, MenuItem hidden, MenuItem mica,
+            MenuItem acrylic, MenuItem autostart, Action sound, Action mixer, Action exit)
+        {
+            return new ContextMenu(new[]
+            {
+                new MenuItem("Sound settings", delegate { sound(); }),
+                new MenuItem("Windows volume mixer", delegate { mixer(); }),
+                new MenuItem("-"),
+                hidden,
+                new MenuItem("Settings", new[] { mica, acrylic, new MenuItem("-"), autostart }),
+                new MenuItem("-"),
+                new MenuItem(version) { Enabled = false },
+                new MenuItem("Exit", delegate { exit(); })
+            });
         }
 
         // Subscribe to the volume of the current default device
@@ -892,12 +1056,14 @@ namespace TrayMixer
         {
             // Protection against DLL planting: system libraries load only from System32, not from the exe folder
             try { Native.SetDefaultDllDirectories(0x800); } catch { }
+            // Multicore JIT: later launches compile the startup methods on a background thread
+            try { string dir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrayMixer"); System.IO.Directory.CreateDirectory(dir); System.Runtime.ProfileOptimization.SetProfileRoot(dir); System.Runtime.ProfileOptimization.StartProfile("startup.profile"); } catch { }
             Native.SetProcessDPIAware();
             float scale; using (var g = Graphics.FromHwnd(IntPtr.Zero)) scale = g.DpiX / 96f;
             if (args.Length > 1 && args[0] == "--make-icon" && args[1].EndsWith(".ico", StringComparison.OrdinalIgnoreCase)) { Art.WriteIco(args[1]); return; }
             if (args.Length > 1 && args[0] == "--render" && args[1].EndsWith(".png", StringComparison.OrdinalIgnoreCase)) { var p = new Popup(Popup.Mica, scale); p.CreateControl(); p.RenderTo(args[1], Color.FromArgb(32, 32, 32)); return; }
             // Used by the uninstaller: put the screens back to normal gamma after the process was killed, then quit
-            if (args.Length > 0 && args[0] == "--reset-gamma") { BlueLight.Reset(); return; }
+            if (args.Length > 0 && args[0] == "--reset-gamma") { Environment.ExitCode = BlueLight.Reset() ? 0 : 1; return; }
             bool created;
             using (new Mutex(true, @"Local\TrayMixer_7c1f3e2a-5b0d-4f9e-9a61-2d8c4b7e1a90", out created))
             {

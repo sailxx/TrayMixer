@@ -19,6 +19,7 @@ namespace TrayMixer
         static volatile bool filterOn = Theme.RegInt(CfgKey, "BlueFilterOn", 1) == 1, dimOn = Theme.RegInt(CfgKey, "BlueDimOn", 1) == 1;
         static readonly object io = new object(), q = new object();
         static readonly Dictionary<string, ushort[]> applied = new Dictionary<string, ushort[]>(); // what was applied to each screen
+        static readonly Dictionary<string, ushort[]> original = new Dictionary<string, ushort[]>();
         static bool busy, pending, touched;
         static Timer guard;
         static volatile bool stopped;     // Reset was called: no more writes
@@ -54,20 +55,44 @@ namespace TrayMixer
         }
 
         // Give the screens their normal gamma back (on exit)
-        public static void Reset()
+        public static bool Reset()
         {
             stopped = true;
             var g = guard; if (g != null) g.Dispose();
-            RestoreNormal();
+            return RestoreNormal();
         }
 
-        static void RestoreNormal()
+        static string GammaName(string name) { return "GammaOriginal_" + name; }
+        static ushort[] LoadOriginal(string name)
+        {
+            using (var k = Registry.CurrentUser.OpenSubKey(CfgKey)) {
+                var bytes = k == null ? null : k.GetValue(GammaName(name)) as byte[];
+                if (bytes == null || bytes.Length != 1536) return null;
+                var ramp = new ushort[768]; Buffer.BlockCopy(bytes, 0, ramp, 0, bytes.Length); return ramp;
+            }
+        }
+        static void RememberOriginal(string name, ushort[] ramp)
+        {
+            var bytes = new byte[1536]; Buffer.BlockCopy(ramp, 0, bytes, 0, bytes.Length);
+            using (var k = Registry.CurrentUser.CreateSubKey(CfgKey)) k.SetValue(GammaName(name), bytes, RegistryValueKind.Binary);
+        }
+
+        static bool RestoreNormal()
         {
             lock (io)
             {
+                bool restored = true;
                 if (touched || dirtyFlag || Theme.RegInt(CfgKey, DirtyValue, 0) == 1)
-                    ForEachScreen((dc, name) => Native.SetDeviceGammaRamp(dc, Ramp(1, 1, 1)));
-                touched = false; applied.Clear(); SetDirty(false);
+                    restored = ForEachScreen((dc, name) => {
+                        ushort[] saved;
+                        if (!original.TryGetValue(name, out saved)) saved = LoadOriginal(name);
+                        if (saved != null) {
+                            if (!Native.SetDeviceGammaRamp(dc, saved)) { restored = false; return; }
+                            using (var k = Registry.CurrentUser.CreateSubKey(CfgKey)) k.DeleteValue(GammaName(name), false);
+                        }
+                    }) && restored;
+                touched = !restored; applied.Clear(); SetDirty(!restored);
+                return restored;
             }
         }
 
@@ -115,10 +140,24 @@ namespace TrayMixer
                 touched = true;
                 double r, g, b; Target(out r, out g, out b);
                 bool identity = r >= 1 && g >= 1 && b >= 1;
-                if (!identity && !dirtyFlag) SetDirty(true);
-                else if (identity && dirtyFlag) SetDirty(false);
+                // The dirty flag is set below, after saving the original ramp.
+                // Keep recovery information until a successful restore.
                 ForEachScreen((dc, name) =>
                 {
+                    ushort[] baseline;
+                    if (!original.TryGetValue(name, out baseline)) {
+                        baseline = LoadOriginal(name);
+                        if (baseline == null) {
+                            baseline = new ushort[768];
+                            if (!Native.GetDeviceGammaRamp(dc, baseline)) return;
+                            RememberOriginal(name, baseline);
+                        }
+                        original[name] = baseline;
+                    }
+                    if (!identity) {
+                        RememberOriginal(name, baseline);
+                        if (!dirtyFlag) SetDirty(true);
+                    }
                     ushort[] last;
                     if (check && applied.TryGetValue(name, out last))
                     {
@@ -126,17 +165,17 @@ namespace TrayMixer
                         if (!Native.GetDeviceGammaRamp(dc, cur) || Same(cur, last)) return;
                     }
                     // Full effect; if Windows refuses, the largest share it accepts
-                    var ramp = Ramp(r, g, b);
+                    var ramp = Scale(baseline, r, g, b);
                     if (!Native.SetDeviceGammaRamp(dc, ramp))
                     {
                         double lo = 0, hi = 1; ramp = null;
                         for (int i = 0; i < 7; i++)
                         {
                             double k = (lo + hi) / 2;
-                            var t = Ramp(1 - (1 - r) * k, 1 - (1 - g) * k, 1 - (1 - b) * k);
+                            var t = Scale(baseline, 1 - (1 - r) * k, 1 - (1 - g) * k, 1 - (1 - b) * k);
                             if (Native.SetDeviceGammaRamp(dc, t)) { lo = k; ramp = t; } else hi = k;
                         }
-                        if (ramp == null) { ramp = Ramp(1, 1, 1); Native.SetDeviceGammaRamp(dc, ramp); }
+                        if (ramp == null) { ramp = baseline; Native.SetDeviceGammaRamp(dc, ramp); }
                     }
                     applied[name] = ramp;
                 });
@@ -179,28 +218,42 @@ namespace TrayMixer
             return a;
         }
 
+        static ushort[] Scale(ushort[] baseline, double r, double g, double b)
+        {
+            var a = new ushort[768];
+            for (int i = 0; i < 256; i++) {
+                a[i] = (ushort)Math.Round(baseline[i] * r);
+                a[256 + i] = (ushort)Math.Round(baseline[256 + i] * g);
+                a[512 + i] = (ushort)Math.Round(baseline[512 + i] * b);
+            }
+            return a;
+        }
+
         static bool Same(ushort[] a, ushort[] b)
         {
             for (int i = 0; i < a.Length; i++) if (Math.Abs(a[i] - b[i]) > 256) return false; // the driver may round slightly
             return true;
         }
 
-        static void ForEachScreen(Action<IntPtr, string> f)
+        static bool ForEachScreen(Action<IntPtr, string> f)
         {
             var names = new List<string>();
-            Native.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr hMon, IntPtr hdc, IntPtr rc, IntPtr data) =>
+            bool success = true;
+            bool enumerated = Native.EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr hMon, IntPtr hdc, IntPtr rc, IntPtr data) =>
             {
                 var mi = new Native.MONITORINFOEX { cbSize = Marshal.SizeOf(typeof(Native.MONITORINFOEX)) };
                 if (Native.GetMonitorInfo(hMon, ref mi)) names.Add(mi.szDevice);
+                else success = false;
                 return true;
             }, IntPtr.Zero);
             foreach (var n in names)
             {
                 IntPtr dc = Native.CreateDC("DISPLAY", n, null, IntPtr.Zero);
-                if (dc == IntPtr.Zero) continue;
-                try { f(dc, n); } catch { }
+                if (dc == IntPtr.Zero) { success = false; continue; }
+                try { f(dc, n); } catch { success = false; }
                 finally { Native.DeleteDC(dc); }
             }
+            return enumerated && success && names.Count > 0;
         }
     }
 

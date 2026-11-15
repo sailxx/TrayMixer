@@ -6,7 +6,7 @@
 
 <img src="assets/readme/hero-es.svg" width="100%" alt="TrayMixer — el volumen de cada dispositivo y aplicación en una sola ventana de Windows 11">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe"><img src="assets/readme/cta-es.svg" height="52" alt="Descargar para Windows 11"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe"><img src="assets/readme/cta-es.svg" height="52" alt="Descargar para Windows 11"></a>
 
 </div>
 
@@ -66,8 +66,9 @@ Get-FileHash .\TrayMixer.exe -Algorithm SHA256
 
 ## Instalación
 
-1. Descarga [`TrayMixer.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer.exe) y guárdalo en una carpeta permanente, por ejemplo `%LOCALAPPDATA%\TrayMixer`.
-2. Ejecútalo. El icono aparecerá en la bandeja y el inicio automático se activará solo (se desactiva en el menú).
+1. Descarga [`TrayMixer-Setup.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe) y ejecútalo.
+2. Elige la carpeta y el inicio automático. Setup crea accesos directos en el escritorio y en Inicio.
+3. Ejecuta el nuevo Setup para actualizar o el mismo para reinstalar. Conserva la configuración y no necesita conexión a Internet.
 
 ## Code signing policy
 
