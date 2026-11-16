@@ -180,7 +180,8 @@ namespace TrayMixer
 
     static class Audio
     {
-        public static readonly IMMDeviceEnumerator En = (IMMDeviceEnumerator)new MMDeviceEnumeratorCo();
+        [ThreadStatic] static IMMDeviceEnumerator enumerator;
+        public static IMMDeviceEnumerator En { get { return enumerator ?? (enumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorCo()); } }
         static Guid IID_EPV = typeof(IAudioEndpointVolume).GUID;
         static Guid IID_ASM2 = typeof(IAudioSessionManager2).GUID;
         static PROPERTYKEY PK_Name = new PROPERTYKEY(new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"), 14);

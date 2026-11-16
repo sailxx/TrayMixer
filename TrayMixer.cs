@@ -27,6 +27,7 @@ namespace TrayMixer
     class Theme
     {
         public bool Light;
+        bool transparency;
         public Color Fg, Sub, Track, ThumbOuter, ThumbBorder, Hover, Sep, Accent, Badge, Footer, Tint;
         public static readonly string FontName = Pick("Inter", "Segoe UI");
         public static readonly string FontSemi = Pick("Segoe UI Variable Text Semibold", "Segoe UI Semibold");
@@ -38,10 +39,11 @@ namespace TrayMixer
 
         public static Theme Load()
         {
-            var t = new Theme { Light = RegInt(Personalize, "AppsUseLightTheme", 0) == 1 };
+            // The charcoal surface keeps light controls in either Windows theme.
+            var t = new Theme { Light = false, transparency = !SystemInformation.HighContrast && RegInt(Personalize, "EnableTransparency", 1) != 0 };
             if (t.Light)
             {
-                t.Fg = C(0xE4000000); t.Sub = C(0x9E000000); t.Track = C(0x72000000); t.ThumbOuter = C(0xFFFFFFFF);
+                t.Fg = C(0xFF111820); t.Sub = C(0xFF424B56); t.Track = C(0xB0000000); t.ThumbOuter = C(0xFFFFFFFF);
                 t.ThumbBorder = C(0x29000000); t.Hover = C(0x0F000000); t.Sep = C(0x14000000); t.Badge = C(0xFFF3F3F3); t.Footer = C(0x0C000000);
                 t.Tint = C(0x88F9F9F9);
             }
@@ -61,16 +63,142 @@ namespace TrayMixer
                 }
             }
             catch { }
+            // Keep secondary labels and controls readable on the brightest wallpaper.
+            if (!t.Light) { t.Sub = Color.FromArgb(218, 226, 236); t.Track = Color.FromArgb(190, 202, 216); }
+            if (SystemInformation.HighContrast)
+            {
+                t.Fg = t.Sub = SystemColors.WindowText; t.Accent = SystemColors.Highlight;
+                t.Track = SystemColors.WindowText; t.Hover = SystemColors.Highlight;
+                t.Badge = t.ThumbOuter = SystemColors.Window; t.Footer = SystemColors.Window;
+            }
             return t;
         }
 
-        public bool SameAs(Theme o) { return o.Light == Light && o.Accent == Accent; }
+        public bool Transparency { get { return transparency; } }
+        public Color Solid { get { return SystemInformation.HighContrast ? SystemColors.Window : Color.FromArgb(32, 32, 32); } }
+        // Only about 10% wallpaper shows through; foreground elements remain fully opaque.
+        public Color Glass { get { return Transparency ? Color.FromArgb(230, 32, 32, 32) : Solid; } }
+        public Color Surface(bool material) { return material && Transparency ? Glass : Solid; }
+        public bool SameAs(Theme o) { return o.Light == Light && o.Accent == Accent && o.Transparency == Transparency; }
         public static bool TaskbarLight() { return RegInt(Personalize, "SystemUsesLightTheme", 0) == 1; }
 
         public static int RegInt(string path, string name, int def)
         {
             try { using (var k = Registry.CurrentUser.OpenSubKey(path)) { var v = k == null ? null : k.GetValue(name); return v is int ? (int)v : def; } }
             catch { return def; }
+        }
+    }
+
+    // Wallpaper-backed frost avoids the opaque ToolStrip/DWM composition path.
+    // Only the public desktop wallpaper is read; never capture other windows.
+    static class WallpaperGlass
+    {
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        static extern bool SystemParametersInfo(int action, int param, StringBuilder value, int flags);
+        static Bitmap wallpaper;
+        static readonly object gate = new object();
+        static readonly Dictionary<Size, Bitmap> blurredCache = new Dictionary<Size, Bitmap>();
+        static readonly Dictionary<string, Bitmap> surfaces = new Dictionary<string, Bitmap>();
+        internal static int SurfaceBuilds;
+        static int refreshing;
+        internal static int CacheBuilds;
+        static string signature;
+        internal static void RefreshAsync(Control owner)
+        {
+            if (!Theme.Load().Transparency) return;
+            if (Interlocked.Exchange(ref refreshing, 1) != 0) return;
+            ThreadPool.QueueUserWorkItem(delegate {
+                try { Refresh(); }
+                finally { Interlocked.Exchange(ref refreshing, 0); }
+                try { if (!owner.IsDisposed && owner.IsHandleCreated) owner.BeginInvoke((Action)(() => owner.Invalidate(true))); } catch { }
+            });
+        }
+        static void ClearCache()
+        {
+            foreach (var image in surfaces.Values) image.Dispose();
+            surfaces.Clear();
+            foreach (var image in blurredCache.Values) image.Dispose();
+            blurredCache.Clear();
+        }
+        internal static string Status = "not loaded";
+        internal static int Paints;
+        internal static void Refresh()
+        {
+            try
+            {
+                var path = new StringBuilder(32768);
+                if (!SystemParametersInfo(0x73, path.Capacity, path, 0)) return;
+                string file = path.ToString();
+                if (!System.IO.File.Exists(file))
+                    file = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Microsoft\Windows\Themes\TranscodedWallpaper");
+                string next = file + "|" + System.IO.File.GetLastWriteTimeUtc(file).Ticks;
+                if (next == signature) return;
+                Bitmap loaded = null;
+                if (System.IO.File.Exists(file))
+                    using (var image = Image.FromFile(file)) loaded = new Bitmap(image);
+                lock (gate)
+                {
+                    if (wallpaper != null) wallpaper.Dispose();
+                    ClearCache();
+                    wallpaper = loaded; signature = next;
+                    Status = loaded == null ? "wallpaper unavailable" : "wallpaper loaded " + loaded.Width + "x" + loaded.Height;
+                }
+            }
+            catch { lock (gate) { if (wallpaper != null) wallpaper.Dispose(); wallpaper = null; signature = null; ClearCache(); } }
+        }
+        internal static void Paint(Graphics g, Rectangle client, Rectangle screenBounds, Rectangle windowBounds, Theme theme)
+        {
+            Paints++;
+            if (client.Width <= 0 || client.Height <= 0) return;
+            lock (gate)
+            {
+                // Cache the final crop and tint, not just the monitor-sized wallpaper.
+                string key = client.Size + "|" + screenBounds + "|" + windowBounds + "|" + theme.Glass.ToArgb() + "|" + theme.Solid.ToArgb();
+                Bitmap prepared;
+                if (!surfaces.TryGetValue(key, out prepared))
+                {
+                    if (surfaces.Count >= 8) { foreach (var image in surfaces.Values) image.Dispose(); surfaces.Clear(); }
+                    prepared = new Bitmap(client.Width, client.Height, PixelFormat.Format32bppPArgb);
+                    using (var graphics = Graphics.FromImage(prepared)) PaintCore(graphics, new Rectangle(Point.Empty, client.Size), screenBounds, windowBounds, theme);
+                    surfaces.Add(key, prepared); SurfaceBuilds++;
+                }
+                g.DrawImageUnscaled(prepared, client.Location);
+            }
+        }
+        static void PaintCore(Graphics g, Rectangle client, Rectangle screenBounds, Rectangle windowBounds, Theme theme)
+        {
+            g.Clear(theme.Solid);
+            if (!theme.Transparency || client.Width <= 0 || client.Height <= 0) return;
+            // Near-clear frost preserves more wallpaper detail without weakening the contrast scrim.
+            int w = Math.Max(1, screenBounds.Width / 2), h = Math.Max(1, screenBounds.Height / 2);
+            lock (gate)
+            {
+                if (wallpaper == null) return;
+                Bitmap blurred;
+                var key = new Size(w, h);
+                if (!blurredCache.TryGetValue(key, out blurred))
+                {
+                    if (blurredCache.Count >= 4) ClearCache();
+                    blurred = new Bitmap(w, h);
+                    using (var bg = Graphics.FromImage(blurred))
+                    {
+                        bg.Clear(Color.Black);
+                        bg.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                        float scale = Math.Max((float)w / wallpaper.Width, (float)h / wallpaper.Height);
+                        float dw = wallpaper.Width * scale, dh = wallpaper.Height * scale;
+                        bg.DrawImage(wallpaper, (w - dw) / 2, (h - dh) / 2, dw, dh);
+                    }
+                    blurredCache.Add(key, blurred); CacheBuilds++;
+                }
+                var old = g.InterpolationMode;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                var src = new RectangleF((windowBounds.Left - screenBounds.Left) * w / (float)screenBounds.Width,
+                    (windowBounds.Top - screenBounds.Top) * h / (float)screenBounds.Height,
+                    client.Width * w / (float)screenBounds.Width, client.Height * h / (float)screenBounds.Height);
+                g.DrawImage(blurred, client, src, GraphicsUnit.Pixel);
+                g.InterpolationMode = old;
+            }
+            using (var tint = new SolidBrush(theme.Glass)) g.FillRectangle(tint, client);
         }
     }
 
@@ -180,6 +308,8 @@ namespace TrayMixer
     static class GdiText
     {
         const int K = 3;
+        static readonly Dictionary<string, Bitmap> Labels = new Dictionary<string, Bitmap>();
+        internal static int Rasterizations;
         static readonly System.Collections.Generic.Dictionary<string, Font> Big = new System.Collections.Generic.Dictionary<string, Font>();
 
         static Font BigFont(Font f)
@@ -195,6 +325,11 @@ namespace TrayMixer
             if (string.IsNullOrEmpty(s)) return;
             var r = Rectangle.Round(rf);
             if (r.Width <= 0 || r.Height <= 0) return;
+            string key = s + "|" + f.Name + "|" + f.Size + "|" + (int)f.Style + "|" + c.ToArgb() + "|" + r.Size + "|" + align;
+            Bitmap label;
+            if (Labels.TryGetValue(key, out label)) { g.DrawImageUnscaled(label, r.Location); return; }
+            if (Labels.Count >= 384) { foreach (var cached in Labels.Values) cached.Dispose(); Labels.Clear(); }
+            label = new Bitmap(r.Width, r.Height, PixelFormat.Format32bppPArgb);
             using (var big = new Bitmap(r.Width * K, r.Height * K, PixelFormat.Format32bppPArgb))
             {
                 using (var bg = Graphics.FromImage(big))
@@ -208,11 +343,14 @@ namespace TrayMixer
                     bg.TextRenderingHint = TextRenderingHint.AntiAlias;
                     bg.DrawString(s, BigFont(f), b, new RectangleF(0, 0, big.Width, big.Height), sf);
                 }
-                var oldI = g.InterpolationMode; var oldP = g.PixelOffsetMode;
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic; g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                g.DrawImage(big, r);
-                g.InterpolationMode = oldI; g.PixelOffsetMode = oldP;
+                using (var output = Graphics.FromImage(label))
+                {
+                    output.InterpolationMode = InterpolationMode.HighQualityBicubic; output.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    output.DrawImage(big, new Rectangle(Point.Empty, r.Size));
+                }
             }
+            Labels.Add(key, label); Rasterizations++;
+            g.DrawImageUnscaled(label, r.Location);
         }
     }
 
@@ -239,15 +377,38 @@ namespace TrayMixer
         readonly float s;
         readonly List<Item> items = new List<Item>();
         readonly System.Windows.Forms.Timer sync = new System.Windows.Forms.Timer { Interval = 1000 };
-        string signature = "";
+        bool scanning;
+        bool refreshAgain;
+        bool rebuildAgain;
         Item hoverItem, dragItem; int hoverPart; // 1: icon, 2: title, 3: slider, 4/5: footer buttons
         IntPtr dib, memDC, oldBmp; Bitmap surface; int dibW, dibH;
         Font fText, fValue, fGlyph, fFootGlyph, fBadge;
         const string GearGlyph = "";
         static readonly string[] FooterUris = { "ms-settings:apps-volume", "ms-settings:sound" };
         int backdrop;
+        bool material;
         int wheel, ticks;   // wheel: accumulated mouse wheel delta; ticks: timer ticks since the window opened
 
+        readonly System.Windows.Forms.Timer appearance = new System.Windows.Forms.Timer { Interval = 15 };
+        readonly Stopwatch appearanceClock = new Stopwatch();
+        readonly System.Windows.Forms.Timer volumeWrite = new System.Windows.Forms.Timer { Interval = 16 };
+        Item pendingVolume;
+        void FlushVolume()
+        {
+            volumeWrite.Stop();
+            var item = pendingVolume; pendingVolume = null;
+            if (item == null) return;
+            try {
+                item.SetVol(item.Value / 100f);
+                if (item.Muted && item.Value > 0 && item.SetMute != null) { item.SetMute(false); item.Muted = false; }
+            } catch { }
+        }
+        Rectangle restingBounds;
+        [DllImport("user32.dll", EntryPoint = "SystemParametersInfoW")]
+        static extern bool GetAnimation(int action, int param, out int enabled, int flags);
+        internal static bool MotionEnabled { get { int enabled; return !SystemInformation.HighContrast && GetAnimation(0x1042, 0, out enabled, 0) && enabled != 0; } }
+        internal const int AppearanceDuration = 200;
+        internal static double EaseOut(double progress) { double p = Math.Max(0, Math.Min(1, progress)); return 1 - Math.Pow(1 - p, 3); }
         public DateTime LastHide = DateTime.MinValue;
 
         public Popup(int backdrop, float scale)
@@ -263,6 +424,14 @@ namespace TrayMixer
             fBadge = new Font(Theme.GlyphName, S(7), GraphicsUnit.Pixel);
             // Every tick only re-reads values; the full device and app enumeration runs on every third tick
             sync.Tick += delegate { if (++ticks % 3 == 0) RefreshContent(false); else SyncValues(); };
+            volumeWrite.Tick += delegate { FlushVolume(); };
+            appearance.Tick += delegate {
+                double progress = appearanceClock.Elapsed.TotalMilliseconds / AppearanceDuration;
+                var work = Screen.FromControl(this).WorkingArea;
+                var next = new Point(restingBounds.X, Math.Min(work.Bottom - Height, restingBounds.Y + (int)Math.Round(S(12) * (1 - EaseOut(progress)))));
+                if (Location != next) Location = next;
+                if (progress >= 1) { appearance.Stop(); appearanceClock.Stop(); Bounds = restingBounds; RefreshContent(false); }
+            };
         }
 
         int S(float v) { return (int)Math.Round(v * s); }
@@ -283,20 +452,30 @@ namespace TrayMixer
         void ApplyBackdrop()
         {
             if (!IsHandleCreated) return;
-            var m = new Native.MARGINS { L = -1, R = -1, T = -1, B = -1 };
-            Native.DwmExtendFrameIntoClientArea(Handle, ref m);
+            int extent = T.Transparency ? -1 : 0;
+            var m = new Native.MARGINS { L = extent, R = extent, T = extent, B = extent };
+            bool frame = Native.DwmExtendFrameIntoClientArea(Handle, ref m) == 0;
             int dark = T.Light ? 0 : 1; Native.DwmSetWindowAttribute(Handle, 20, ref dark, 4);  // dark frame
             int round = 2; Native.DwmSetWindowAttribute(Handle, 33, ref round, 4);                // rounded corners
-            int bd = backdrop; Native.DwmSetWindowAttribute(Handle, 38, ref bd, 4);               // Mica / Acrylic
+            int bd = T.Transparency ? backdrop : 1;
+            material = Native.DwmSetWindowAttribute(Handle, 38, ref bd, 4) == 0 && frame && T.Transparency;
+            Invalidate();
         }
 
         // ── Show / hide ──
         public void ShowPopup()
         {
             var nt = Theme.Load();
-            if (!nt.SameAs(T)) { T = nt; ApplyBackdrop(); }
-            RefreshContent(true);
+            T = nt; WallpaperGlass.RefreshAsync(this); ApplyBackdrop();
+            appearance.Stop();
+            if (items.Count == 0) RefreshContent(true);
+            else { SyncValues(); Place(Width, Height); }
+            restingBounds = Bounds;
+            bool animate = MotionEnabled;
+            if (animate) Location = new Point(restingBounds.X, restingBounds.Y + S(12));
             Show(); Activate(); Native.SetForegroundWindow(Handle);
+            if (animate) { appearanceClock.Restart(); appearance.Start(); }
+            if (!animate) BeginInvoke((Action)(() => { if (Visible) RefreshContent(false); }));
             ticks = 0; sync.Start();
             // Brightness is read in the background: the window opens at once with the previous values
             Brightness.ScanAsync(() => { try { BeginInvoke((Action)(() => RefreshContent(false))); } catch { } });
@@ -305,46 +484,65 @@ namespace TrayMixer
         public void HidePopup()
         {
             if (!Visible) return;
-            Hide(); sync.Stop();
-            items.Clear(); signature = ""; hoverItem = dragItem = null;
-            FreeDib();
+            appearance.Stop(); appearanceClock.Stop();
+            FlushVolume(); Hide(); sync.Stop();
+            Bounds = restingBounds;
+            hoverItem = dragItem = null;
             LastHide = DateTime.Now;
-            Native.Trim();
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                FlushVolume(); volumeWrite.Dispose();
+                appearance.Stop(); appearance.Dispose(); sync.Stop(); sync.Dispose();
+                FreeDib();
+                fText.Dispose(); fValue.Dispose(); fGlyph.Dispose(); fFootGlyph.Dispose(); fBadge.Dispose();
+            }
+            base.Dispose(disposing);
+        }
         protected override void OnDeactivate(EventArgs e) { base.OnDeactivate(e); HidePopup(); }
         protected override bool ProcessCmdKey(ref Message msg, Keys key) { if (key == Keys.Escape) { HidePopup(); return true; } return base.ProcessCmdKey(ref msg, key); }
 
         // ── Data ──
-        static string Sig(List<DeviceInfo> devs, List<AppInfo> apps, List<Display> disps)
-        {
-            var sb = new StringBuilder();
-            foreach (var d in devs) sb.Append(d.Id).Append(d.IsDefault ? "*" : "").Append('|');
-            sb.Append("||");
-            foreach (var a in apps) sb.Append(a.Key).Append(':').Append(a.Vols.Count).Append('|');
-            sb.Append("||");
-            foreach (var d in disps) sb.Append(d.Key).Append('|');
-            sb.Append("v").Append(Brightness.Version); // new Display objects after a rescan must rebuild the rows
-            return sb.ToString();
-        }
-
         public void SyncValues()
         {
-            if (!Visible) return;
-            foreach (var it in items) if (it.K == Kind.Row && it != dragItem) it.Sync();
-            Invalidate();
+            if (!Visible || dragItem != null || pendingVolume != null || appearance.Enabled) return;
+            bool changed = false;
+            foreach (var it in items) if (it.K == Kind.Row && it != dragItem)
+            {
+                int value = it.Value; bool muted = it.Muted;
+                it.Sync();
+                if (value != it.Value || muted != it.Muted) changed = true;
+            }
+            if (changed) Invalidate();
         }
 
         public void RefreshContent(bool force)
         {
-            if (dragItem != null) return;
-            List<DeviceInfo> devs; List<AppInfo> apps;
-            try { devs = Audio.Devices(); apps = Audio.Apps(); } catch { return; }
-            var disps = Brightness.Displays;
-            string sig = Sig(devs, apps, disps);
-            if (!force && sig == signature) { SyncValues(); return; }
-            signature = sig;
-            Build(devs, apps, disps);
+            if (dragItem != null || pendingVolume != null || appearance.Enabled) return;
+            if (scanning) { refreshAgain = true; rebuildAgain |= force; return; }
+            // The first population stays synchronous; later discovery runs on MTA workers.
+            if (items.Count == 0) {
+                try { var devs = Audio.Devices(); var apps = Audio.Apps(); Build(devs, apps, Brightness.Displays); } catch { }
+                return;
+            }
+            scanning = true;
+            ThreadPool.QueueUserWorkItem(delegate {
+                List<DeviceInfo> devs = null; List<AppInfo> apps = null;
+                try { devs = Audio.Devices(); apps = Audio.Apps(); } catch { }
+                try { BeginInvoke((Action)(() => {
+                    scanning = false;
+                    if (devs != null && apps != null && Visible && dragItem == null && pendingVolume == null && !appearance.Enabled) {
+                        // Always replace bindings: a same-count session replacement is still new COM state.
+                        Build(devs, apps, Brightness.Displays);
+                    }
+                    bool again = refreshAgain, rebuild = rebuildAgain;
+                    refreshAgain = rebuildAgain = false;
+                    if (again && Visible) RefreshContent(rebuild);
+                })); } catch { }
+            });
         }
 
         void Build(List<DeviceInfo> devs, List<AppInfo> apps, List<Display> disps)
@@ -420,14 +618,22 @@ namespace TrayMixer
                 y += it.H;
                 if (it.K == Kind.Row) it.Sync();
             }
-            Place(S(W), y);
+            // A periodic binding refresh must not move the panel to the cursor's monitor.
+            if (Width != S(W) || Height != y) {
+                if (Visible) {
+                    var screen = Screen.FromControl(this);
+                    restingBounds = FlyoutPlacement.Bounds(screen.Bounds, screen.WorkingArea, new Size(S(W), y), S(12));
+                    Bounds = restingBounds;
+                } else Place(S(W), y);
+            }
             Invalidate();
         }
 
         void Place(int w, int h)
         {
             var scr = Screen.FromPoint(Cursor.Position);
-            Bounds = FlyoutPlacement.Bounds(scr.Bounds, scr.WorkingArea, new Size(w, h), S(12));
+            restingBounds = FlyoutPlacement.Bounds(scr.Bounds, scr.WorkingArea, new Size(w, h), S(12));
+            Bounds = restingBounds;
         }
 
         // ── Row geometry (compact: icon on the left, title above the slider) ──
@@ -476,8 +682,7 @@ namespace TrayMixer
 
         void Render(Graphics g)
         {
-            // DWM Acrylic comes out light gray and flat, so tint it like Windows 11 flyouts
-            g.Clear(backdrop == Acrylic ? T.Tint : Color.Transparent);
+            WallpaperGlass.Paint(g, ClientRectangle, Screen.FromControl(this).Bounds, appearance.Enabled ? restingBounds : Bounds, T);
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
@@ -496,6 +701,7 @@ namespace TrayMixer
         // Debug: render the window over the given background without showing it on screen
         public void RenderTo(string path, Color bg)
         {
+            WallpaperGlass.Refresh();
             try { Brightness.Scan(); } catch { }
             RefreshContent(true);
             using (var bmp = new Bitmap(Width, Height, PixelFormat.Format32bppPArgb))
@@ -625,14 +831,12 @@ namespace TrayMixer
         {
             v = Math.Max(0, Math.Min(100, v));
             if (v == it.Value) return;
+            if (pendingVolume != null && pendingVolume != it) FlushVolume();
             it.Value = v;
-            try
-            {
-                it.SetVol(v / 100f);
-                if (it.Muted && v > 0) { it.SetMute(false); it.Muted = false; }
-            }
-            catch { }
+            pendingVolume = it;
+            // Paint immediately; collapse redundant mouse samples to one write per frame.
             Invalidate();
+            volumeWrite.Start();
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
@@ -671,7 +875,7 @@ namespace TrayMixer
             }
         }
 
-        protected override void OnMouseUp(MouseEventArgs e) { if (dragItem != null) { dragItem = null; Capture = false; Invalidate(); } }
+        protected override void OnMouseUp(MouseEventArgs e) { if (dragItem != null) { FlushVolume(); dragItem = null; Capture = false; Invalidate(); } }
 
         protected override void OnMouseWheel(MouseEventArgs e)
         {
@@ -726,8 +930,18 @@ namespace TrayMixer
     class Notifier : IMMNotificationClient, IAudioEndpointVolumeCallback
     {
         readonly Control ui; public Action VolumeChanged, DevicesChanged;
+        int volumePending, devicesPending;
         public Notifier(Control ui) { this.ui = ui; }
-        void Post(Action a) { try { if (a != null) ui.BeginInvoke(a); } catch { } }
+        void Post(Action a)
+        {
+            if (a == null) return;
+            bool volume = a == VolumeChanged;
+            if (volume ? Interlocked.Exchange(ref volumePending, 1) != 0 : Interlocked.Exchange(ref devicesPending, 1) != 0) return;
+            try { ui.BeginInvoke((Action)(() => {
+                if (volume) Interlocked.Exchange(ref volumePending, 0); else Interlocked.Exchange(ref devicesPending, 0);
+                if (!ui.IsDisposed) a();
+            })); } catch { if (volume) Interlocked.Exchange(ref volumePending, 0); else Interlocked.Exchange(ref devicesPending, 0); }
+        }
         public int OnDeviceStateChanged(string id, int state) { Post(DevicesChanged); return 0; }
         public int OnDeviceAdded(string id) { Post(DevicesChanged); return 0; }
         public int OnDeviceRemoved(string id) { Post(DevicesChanged); return 0; }
@@ -760,11 +974,59 @@ namespace TrayMixer
             this.model = model; this.scale = scale;
             AutoSize = true; ShowImageMargin = false; ShowCheckMargin = false;
             DropShadowEnabled = true;
+            SetStyle(ControlStyles.OptimizedDoubleBuffer, false);
+        }
+        protected override void OnPaintBackground(PaintEventArgs e) { }
+        protected override void OnPaint(PaintEventArgs e) { PaintMaterial(this, e, base.OnPaint); }
+
+        sealed class MaterialMenu : ToolStripDropDownMenu
+        {
+            internal MaterialMenu() { SetStyle(ControlStyles.OptimizedDoubleBuffer, false); }
+            protected override void OnPaintBackground(PaintEventArgs e) { }
+            protected override void OnPaint(PaintEventArgs e) { PaintMaterial(this, e, base.OnPaint); }
+        }
+
+        static void PaintMaterial(ToolStrip menu, PaintEventArgs e, Action<PaintEventArgs> paint)
+        {
+            int w = menu.ClientSize.Width, h = menu.ClientSize.Height;
+            if (w <= 0 || h <= 0) return;
+            // Ordinary GDI buffers discard alpha. Present the whole menu through the
+            // same premultiplied DIB path as the mixer, including text and highlights.
+            var info = new Native.BITMAPINFOHEADER { biSize = 40, biWidth = w, biHeight = -h, biPlanes = 1, biBitCount = 32 };
+            IntPtr bits;
+            IntPtr dib = Native.CreateDIBSection(IntPtr.Zero, ref info, 0, out bits, IntPtr.Zero, 0);
+            IntPtr dc = Native.CreateCompatibleDC(IntPtr.Zero);
+            if (dib == IntPtr.Zero || dc == IntPtr.Zero)
+            {
+                if (dc != IntPtr.Zero) Native.DeleteDC(dc);
+                if (dib != IntPtr.Zero) Native.DeleteObject(dib);
+                paint(e); return;
+            }
+            IntPtr old = Native.SelectObject(dc, dib);
+            try
+            {
+                using (var image = new Bitmap(w, h, w * 4, PixelFormat.Format32bppPArgb, bits))
+                using (var graphics = Graphics.FromImage(image))
+                using (var args = new PaintEventArgs(graphics, menu.ClientRectangle))
+                {
+                    WallpaperGlass.Paint(graphics, menu.ClientRectangle, Screen.FromControl(menu).Bounds, menu.Bounds, Theme.Load());
+                    paint(args);
+                }
+                Native.GdiFlush();
+                IntPtr target = e.Graphics.GetHdc();
+                try { Native.BitBlt(target, 0, 0, w, h, dc, 0, 0, 0x00CC0020); }
+                finally { e.Graphics.ReleaseHdc(target); }
+            }
+            finally
+            {
+                Native.SelectObject(dc, old); Native.DeleteDC(dc); Native.DeleteObject(dib);
+            }
         }
         int S(float v) { return (int)Math.Round(v * scale); }
         internal void RefreshItems()
         {
             theme = Theme.Load();
+            WallpaperGlass.RefreshAsync(this);
             ClearItems(Items);
             if (menuFont != null) menuFont.Dispose();
             menuFont = new Font(Theme.FontName, S(14), GraphicsUnit.Pixel);
@@ -775,7 +1037,7 @@ namespace TrayMixer
         {
             menu.Font = menuFont;
             menu.Padding = new Padding(S(6));
-            menu.BackColor = theme.Light ? Color.FromArgb(243, 243, 243) : Color.FromArgb(32, 32, 32);
+            menu.BackColor = theme.Solid;
             menu.ForeColor = theme.Fg;
             menu.Renderer = new FlyoutRenderer(theme, scale);
             menu.MinimumSize = new Size(S(256), 0);
@@ -790,6 +1052,14 @@ namespace TrayMixer
             int round = 2, dark = theme.Light ? 0 : 1;
             Native.DwmSetWindowAttribute(menu.Handle, 33, ref round, 4);
             Native.DwmSetWindowAttribute(menu.Handle, 20, ref dark, 4);
+            // Respect the Windows accessibility and transparency preferences.
+            bool enabled = theme.Transparency;
+            var margins = new Native.MARGINS { L = enabled ? -1 : 0, R = enabled ? -1 : 0, T = enabled ? -1 : 0, B = enabled ? -1 : 0 };
+            int backdrop = enabled ? Popup.Mica : 1;
+            bool frame = Native.DwmExtendFrameIntoClientArea(menu.Handle, ref margins) == 0;
+            bool applied = Native.DwmSetWindowAttribute(menu.Handle, 38, ref backdrop, 4) == 0;
+            ((FlyoutRenderer)menu.Renderer).Material = enabled && frame && applied;
+            menu.Invalidate();
         }
         static void ClearItems(ToolStripItemCollection items)
         {
@@ -810,6 +1080,7 @@ namespace TrayMixer
                 };
                 if (item.MenuItems.Count > 0)
                 {
+                    row.DropDown = new MaterialMenu();
                     Style(row.DropDown);
                     Populate(row.DropDownItems, item.MenuItems);
                     row.DropDownOpening += delegate {
@@ -841,7 +1112,11 @@ namespace TrayMixer
             readonly Theme t; readonly float s;
             int S(float v) { return (int)Math.Round(v * s); }
             internal FlyoutRenderer(Theme t, float s) { this.t = t; this.s = s; RoundedEdges = false; }
-            protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e) { e.Graphics.Clear(e.ToolStrip.BackColor); }
+            internal bool Material;
+            protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
+            {
+                WallpaperGlass.Paint(e.Graphics, e.ToolStrip.ClientRectangle, Screen.FromControl(e.ToolStrip).Bounds, e.ToolStrip.Bounds, t);
+            }
             protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
             {
                 using (var p = new Pen(t.Sep)) e.Graphics.DrawRectangle(p, 0, 0, e.ToolStrip.Width - 1, e.ToolStrip.Height - 1);
@@ -925,12 +1200,15 @@ namespace TrayMixer
                 VolumeChanged = () => { UpdateTray(); popup.SyncValues(); },
                 DevicesChanged = () => { Rebind(); if (popup.Visible) popup.RefreshContent(true); }
             };
-            try { Audio.En.RegisterEndpointNotificationCallback(notifier); } catch { }
-            Rebind();
-            icon.Visible = true;        // the icon appears first, the rest of the startup work follows
-            Brightness.ScanAsync(null); // warm up the screen list before the first open
-            BlueLight.Start();          // restore the blue light filter and dimming from the last run
-            Native.Trim();
+            UpdateTray();
+            icon.Visible = true;
+            WallpaperGlass.RefreshAsync(popup);
+            popup.BeginInvoke((Action)(() => {
+                try { Audio.En.RegisterEndpointNotificationCallback(notifier); } catch { }
+                Rebind();
+                Brightness.ScanAsync(null);
+                BlueLight.Start();
+            }));
         }
 
         // Keep frequent actions at the top level; less frequent preferences share one submenu.
