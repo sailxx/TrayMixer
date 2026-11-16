@@ -18,8 +18,8 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyTitle("TrayMixer")]
 [assembly: System.Reflection.AssemblyProduct("TrayMixer")]
 [assembly: System.Reflection.AssemblyDescription("Lightweight Windows 11 tray volume mixer")]
-[assembly: System.Reflection.AssemblyVersion("2.9.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("2.9.0.0")]
+[assembly: System.Reflection.AssemblyVersion("3.0.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("3.0.0.0")]
 
 namespace TrayMixer
 {
@@ -43,13 +43,13 @@ namespace TrayMixer
             {
                 t.Fg = C(0xE4000000); t.Sub = C(0x9E000000); t.Track = C(0x72000000); t.ThumbOuter = C(0xFFFFFFFF);
                 t.ThumbBorder = C(0x29000000); t.Hover = C(0x0F000000); t.Sep = C(0x14000000); t.Badge = C(0xFFF3F3F3); t.Footer = C(0x0C000000);
-                t.Tint = C(0xA0F9F9F9);
+                t.Tint = C(0x88F9F9F9);
             }
             else
             {
                 t.Fg = C(0xFFFFFFFF); t.Sub = C(0xC5FFFFFF); t.Track = C(0x8BFFFFFF); t.ThumbOuter = C(0xFF454545);
                 t.ThumbBorder = C(0x18FFFFFF); t.Hover = C(0x15FFFFFF); t.Sep = C(0x18FFFFFF); t.Badge = C(0xFF2C2C2C); t.Footer = C(0x40000000);
-                t.Tint = C(0xC8202020);
+                t.Tint = C(0x9A202020);
             }
             t.Accent = t.Light ? Color.FromArgb(0, 95, 184) : Color.FromArgb(76, 194, 255);
             try
