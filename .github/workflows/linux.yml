@@ -1,0 +1,66 @@
+name: Linux packages
+on:
+  pull_request:
+    paths: ['linux/**', '.github/workflows/linux.yml', 'TrayMixer.ico']
+  workflow_dispatch:
+  push:
+    tags: ['linux-v*']
+permissions:
+  contents: read
+jobs:
+  packages:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install build and smoke-test dependencies
+        run: sudo apt-get update && sudo apt-get install -y rpm curl desktop-file-utils pulseaudio-utils pulseaudio xvfb libice6 libsm6 libfontconfig1 libxrandr2 libxi6
+      - name: Unit and regression checks
+        run: dotnet run --project linux/tests/TrayMixer.Linux.Tests.csproj -c Release
+      - name: Validate desktop entry and scripts
+        run: |
+          desktop-file-validate linux/packaging/traymixer.desktop
+          bash -n linux/package.sh
+          sh -n linux/packaging/AppRun
+      - name: Build DEB RPM AppImage
+        run: bash linux/package.sh 3.1.0
+      - name: Native smoke tests
+        run: |
+          dpkg-deb --info linux/artifacts/*.deb
+          rpm -qip linux/artifacts/*.rpm
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=traymixer_test
+          dotnet run --project linux/tests/TrayMixer.Linux.Tests.csproj -c Release -- --integration
+          mkdir -p /tmp/traymixer-deb
+          dpkg-deb -x linux/artifacts/*.deb /tmp/traymixer-deb
+          xvfb-run -a timeout 8s /tmp/traymixer-deb/usr/lib/traymixer/TrayMixer || test "$?" = 124
+          cd /tmp
+          "$GITHUB_WORKSPACE/linux/artifacts/TrayMixer-3.1.0-x86_64.AppImage" --appimage-extract > /dev/null
+          xvfb-run -a timeout 8s ./squashfs-root/AppRun || test "$?" = 124
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: TrayMixer-3.1.0-linux-x64
+          path: linux/artifacts/*
+          if-no-files-found: error
+  release:
+    if: startsWith(github.ref, 'refs/tags/linux-v')
+    needs: packages
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TrayMixer-3.1.0-linux-x64
+          path: artifacts
+      - name: Publish Linux release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          test "$TAG" = linux-v3.1.0
+          gh release create "$TAG" artifacts/* --repo "$GITHUB_REPOSITORY" --title 'TrayMixer 3.1.0 for Linux' --prerelease --notes 'First Linux port: PipeWire-Pulse/PulseAudio output and app-stream volume, tray icon, XDG autostart, GNOME colors, Charcoal/Nord/Catppuccin/Light themes. x86_64; Ubuntu 24.04 or newer and compatible distributions. GNOME needs AppIndicator support; Wayland uses XWayland. AppImage requires system pactl and desktop libraries. Display brightness and night light currently open desktop settings; integrated display sliders are not yet ported. Linux desktop acceptance testing is still required.'

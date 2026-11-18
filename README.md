@@ -2,101 +2,116 @@
 
 [Русский](README.ru.md) · **English** · [Español](README.es.md) · [Português](README.pt.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Italiano](README.it.md) · [Türkçe](README.tr.md) · [Українська](README.uk.md) · [Polski](README.pl.md)
 
-<br>
+# TrayMixer
+### Your audio. One click away.
 
-<img src="assets/readme/hero-en.svg" width="100%" alt="TrayMixer — volume for every device and app in one Windows 11 flyout">
+[![Windows 11](https://img.shields.io/badge/Windows_11-stable-0078D4?style=for-the-badge&logo=windows11&logoColor=white)](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.0)
+[![Linux](https://img.shields.io/badge/Linux-x86__64_preview-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.0)
+[![GNOME](https://img.shields.io/badge/GNOME-adaptive_theme-4A86CF?style=for-the-badge&logo=gnome&logoColor=white)](linux/README.md)
 
-<a href="https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe"><img src="assets/readme/cta-en.svg" height="52" alt="Download for Windows 11"></a>
+[![DEB](https://img.shields.io/badge/Ubuntu_%2F_Debian-DEB-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer_3.1.0_amd64.deb)
+[![RPM](https://img.shields.io/badge/Fedora-RPM-51A2DA?style=for-the-badge&logo=fedora&logoColor=white)](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer-3.1.0-1.x86_64.rpm)
+[![AppImage](https://img.shields.io/badge/Linux-AppImage-2C2D72?style=for-the-badge&logo=appimage&logoColor=white)](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer-3.1.0-x86_64.AppImage)
 
 </div>
 
-<br>
+![TrayMixer on Windows](assets/readme/screenshot.png)
 
-<img src="assets/readme/screenshot.png" width="100%" alt="TrayMixer flyout: headphones, speakers, browser and system sounds on one screen">
+**TrayMixer** brings output devices and application volume controls to your system tray. The Windows edition uses a compact native flyout; the new Linux preview uses Avalonia, PulseAudio/PipeWire-Pulse, GNOME-adaptive colors and four additional themes. The interface is in English.
 
-The Windows 11 volume mixer is buried in Settings, and the tray volume icon controls just one device. **TrayMixer** is one click away: every pair of headphones, every speaker, every monitor and every app, each with its own slider. No ads, no background load.
+> **Linux preview:** x86_64, Ubuntu 24.04+ baseline or compatible distributions, X11/XWayland, PulseAudio 15+ or PipeWire-Pulse. Fedora/RPM and Debian compatibility still require distribution-specific desktop testing. Integrated display brightness, blue-light and dimming sliders are not yet ported; Linux currently links to desktop display settings. [Requirements and known limitations](linux/README.md).
 
-<br>
+## Install on Windows
 
-<img src="assets/readme/features-en.svg" width="100%" alt="Features: every device, every app, native Windows 11, hide what you don't need, light, secure">
-
-<details>
-<summary><b>Controls</b></summary>
-
-| Action | Result |
-|---|---|
-| **Left-click** the tray icon | Open or close the flyout |
-| **Middle-click** the tray icon | Mute or unmute the default device |
-| **Right-click** the tray icon | Sound settings, Windows mixer, hidden rows, Mica/Acrylic, autostart, exit |
-| Click a **row icon** | Mute or unmute |
-| Click a **device name** | Make it the default device |
-| **Right-click** a row | Hide it |
-| **Mouse wheel** over a row | Volume or brightness ±2 |
-| **Esc** or click outside | Close |
-
-</details>
-
-> [!NOTE]
-> TrayMixer is in English. Setup opens with a choice of English or Russian and continues in the selected language.
-
-<br>
-
-<img src="assets/readme/numbers-en.svg" width="100%" alt="~2 MB RAM, 0% CPU, 165 KB, 0 dependencies">
-
-<br>
-
-<img src="assets/readme/security-en.svg" width="100%" alt="Security: no admin rights, no network, DLL hijacking protection, verifiable builds">
-
-<details>
-<summary><b>How to verify the installer was built from this code</b></summary>
-
-Every release is built by GitHub Actions straight from source, and GitHub signs the build provenance:
-
-```bash
-gh attestation verify TrayMixer-Setup.exe --repo sailxx/TrayMixer
-```
-
-Each release contains only `TrayMixer-Setup.exe`. Its SHA-256 checksum is included in the release description:
-
-```powershell
-Get-FileHash .\TrayMixer-Setup.exe -Algorithm SHA256
-```
-
-</details>
-
-## Install
-
-1. Download [`TrayMixer-Setup.exe`](https://github.com/sailxx/TrayMixer/releases/latest/download/TrayMixer-Setup.exe) and run it.
+1. Download [**TrayMixer-Setup.exe**](https://github.com/sailxx/TrayMixer/releases/download/v3.0.0/TrayMixer-Setup.exe).
 2. Select English or Russian, then choose the install folder (default: `%LOCALAPPDATA%\TrayMixer`).
-3. Setup installs the bundled app without an internet connection and creates desktop and Start menu shortcuts. Choose whether to enable autostart and launch the app.
+3. Setup installs offline and creates desktop and Start menu shortcuts. Choose whether to enable autostart and launch the app.
 
-To update, download Setup from the latest release and run it again. Setup offers **Update** for an older installation or **Reinstall** for the same version, preserves preferences and the autostart choice, and refuses to downgrade a newer installation. Remove TrayMixer through Windows Installed apps; preferences are kept.
+Run Setup again to update or reinstall. Preferences and the autostart choice are preserved; downgrades are refused. Uninstall through Windows Installed apps.
 
 Silent installation: `TrayMixer-Setup.exe /S /NOLAUNCH`. Optional: `/DIR="C:\path\TrayMixer"`, `/NOAUTOSTART`, `/LAUNCH`. Silent removal: `Uninstall.exe /uninstall /S`.
 
-## Code signing policy
+## Install on Linux
 
-The installer and bundled app are **unsigned**. Windows SmartScreen may display a warning; verify the release source and checksum before running Setup.
+### Choose your package
 
-GitHub Actions builds every release from source and publishes **build provenance** (SLSA level 1). Anyone can verify the artifact matches the source:
+| System / format | Download | Installation |
+|---|---|---|
+| Ubuntu / Debian-compatible · **DEB** | [Download .deb](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer_3.1.0_amd64.deb) | Open with your software installer, or use `apt` below |
+| Fedora-compatible · **RPM** | [Download .rpm](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer-3.1.0-1.x86_64.rpm) | Open with your software installer, or use `dnf` below |
+| Portable · **AppImage** | [Download AppImage](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer-3.1.0-x86_64.AppImage) | Allow execution in file properties, then launch |
 
-```bash
+### Ubuntu / Debian-compatible
+
+```sh
+mkdir -p "$HOME/Downloads/TrayMixer"
+cd "$HOME/Downloads/TrayMixer"
+curl -fLO https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer_3.1.0_amd64.deb
+sudo apt install ./TrayMixer_3.1.0_amd64.deb
+traymixer
+```
+
+### Fedora-compatible
+
+```sh
+mkdir -p "$HOME/Downloads/TrayMixer"
+cd "$HOME/Downloads/TrayMixer"
+curl -fLO https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer-3.1.0-1.x86_64.rpm
+sudo dnf install ./TrayMixer-3.1.0-1.x86_64.rpm
+traymixer
+```
+
+### AppImage — portable, no package installation
+
+Install `pulseaudio-utils` using your distribution's package manager first. The AppImage bundles .NET but requires system `pactl`, X11/XWayland libraries, fontconfig, ICU and OpenSSL.
+
+```sh
+mkdir -p "$HOME/Applications"
+cd "$HOME/Applications"
+curl -fLO https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer-3.1.0-x86_64.AppImage
+chmod +x TrayMixer-3.1.0-x86_64.AppImage
+./TrayMixer-3.1.0-x86_64.AppImage
+```
+
+If FUSE is unavailable, run `./TrayMixer-3.1.0-x86_64.AppImage --appimage-extract-and-run` instead. Keep the file in its permanent location before enabling **Start at login**.
+
+> **GNOME tray:** enable an AppIndicator / StatusNotifier extension. Ubuntu normally includes one. Tray support depends on your desktop; no extension is installed automatically. Launch TrayMixer from the application menu to reopen a hidden mixer.
+
+### Themes & controls
+
+- **GNOME / System** follows desktop light/dark and GNOME accent colors.
+- **Charcoal**, **Nord**, **Catppuccin**, **Light** offer alternative palettes. No Mica.
+- Tray activation toggles the mixer; the menu includes default-output mute, autostart, restore rows and Exit.
+- Click an output name to make it the default for new playback. Streams already playing are not forcibly moved.
+- Set volume, mute, use the mouse wheel, or right-click to hide a row. Linux currently shows individual application streams, not grouped application sessions.
+
+### Verify Linux downloads
+
+Download `SHA256SUMS` from the [Linux release](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.0), then compare your package with the corresponding entry using `sha256sum <filename>`. Packages are not signed.
+
+## Windows controls
+
+| Action | Result |
+|---|---|
+| Left-click tray icon | Open / close the flyout |
+| Middle-click tray icon | Mute / unmute default output |
+| Right-click tray icon | Settings, hidden rows, appearance, autostart, exit |
+| Click row icon | Mute / unmute |
+| Click device name | Make default |
+| Right-click row | Hide |
+| Mouse wheel over row | Volume or brightness ±2 |
+| Esc / click outside | Close |
+
+## Build and verification
+
+Windows: run `build.cmd` from the project directory; the compiler is included with Windows 11. Windows releases contain `TrayMixer-Setup.exe`; SHA-256 is included in their descriptions. The installer and app are unsigned. Build provenance is verifiable:
+
+```sh
 gh attestation verify TrayMixer-Setup.exe --repo sailxx/TrayMixer
 ```
 
-## Build from source
-
-Requires Windows with the .NET Framework 4.x C# compiler (included in Windows 11). No SDK or package downloads are needed.
-
-```cmd
-cd /d C:\path\to\TrayMixer
-build.cmd
-```
-
-This builds the app locally and embeds it in `TrayMixer-Setup.exe`, the only release asset.
-
-The installer source is in `installer/Setup.cs`.
+Linux: .NET SDK 10.0, [build instructions and checks](linux/README.md). GitHub Actions builds DEB, RPM and AppImage and runs native PulseAudio and startup smoke checks before publishing a preview. These checks do not replace real GNOME desktop testing. Windows and Linux release streams remain separate.
 
 ## License
 
-Apache-2.0 — see [`LICENSE`](LICENSE).
+Apache-2.0 — see [LICENSE](LICENSE). [Privacy](PRIVACY.md) · [Security](SECURITY.md)

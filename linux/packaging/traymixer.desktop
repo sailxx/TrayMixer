@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=TrayMixer
+Comment=Volume for every output and application
+Exec=traymixer
+Icon=traymixer
+Terminal=false
+Categories=AudioVideo;Audio;Mixer;
+StartupWMClass=TrayMixer

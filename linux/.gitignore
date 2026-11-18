@@ -1,0 +1,7 @@
+bin/
+obj/
+artifacts/
+tests/bin/
+tests/obj/
+*.cjs
+remote-README.md
