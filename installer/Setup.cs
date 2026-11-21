@@ -164,7 +164,7 @@ internal static class Program
             }
             using (var key = Registry.CurrentUser.CreateSubKey(RunKey))
             {
-                if (autostart) key.SetValue(AppName, Quote(exe));
+                if (autostart) key.SetValue(AppName, Quote(exe) + " --startup");
                 else key.DeleteValue(AppName, false);
             }
             // Prevent the app's first-run default from overriding the installer's choice.

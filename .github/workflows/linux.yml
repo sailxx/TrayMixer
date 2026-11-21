@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: '10.0.x'
       - name: Install build and smoke-test dependencies
@@ -27,7 +27,7 @@ jobs:
           bash -n linux/package.sh
           sh -n linux/packaging/AppRun
       - name: Build DEB RPM AppImage
-        run: bash linux/package.sh 3.1.0
+        run: bash linux/package.sh 3.1.1
       - name: Native smoke tests
         run: |
           dpkg-deb --info linux/artifacts/*.deb
@@ -39,12 +39,16 @@ jobs:
           dpkg-deb -x linux/artifacts/*.deb /tmp/traymixer-deb
           xvfb-run -a timeout 8s /tmp/traymixer-deb/usr/lib/traymixer/TrayMixer || test "$?" = 124
           cd /tmp
-          "$GITHUB_WORKSPACE/linux/artifacts/TrayMixer-3.1.0-x86_64.AppImage" --appimage-extract > /dev/null
+          "$GITHUB_WORKSPACE/linux/artifacts/TrayMixer-3.1.1-x86_64.AppImage" --appimage-extract > /dev/null
           xvfb-run -a timeout 8s ./squashfs-root/AppRun || test "$?" = 124
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: TrayMixer-3.1.0-linux-x64
-          path: linux/artifacts/*
+          name: TrayMixer-3.1.1-linux-x64
+          path: |
+            linux/artifacts/TrayMixer_3.1.1_amd64.deb
+            linux/artifacts/TrayMixer-3.1.1-1.x86_64.rpm
+            linux/artifacts/TrayMixer-3.1.1-x86_64.AppImage
+            linux/artifacts/SHA256SUMS
           if-no-files-found: error
   release:
     if: startsWith(github.ref, 'refs/tags/linux-v')
@@ -53,14 +57,17 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: TrayMixer-3.1.0-linux-x64
+          name: TrayMixer-3.1.1-linux-x64
           path: artifacts
+      - name: Verify build checksums
+        working-directory: artifacts
+        run: sha256sum --strict --check SHA256SUMS
       - name: Publish Linux release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          test "$TAG" = linux-v3.1.0
-          gh release create "$TAG" artifacts/* --repo "$GITHUB_REPOSITORY" --title 'TrayMixer 3.1.0 for Linux' --prerelease --notes 'First Linux port: PipeWire-Pulse/PulseAudio output and app-stream volume, tray icon, XDG autostart, GNOME colors, Charcoal/Nord/Catppuccin/Light themes. x86_64; Ubuntu 24.04 or newer and compatible distributions. GNOME needs AppIndicator support; Wayland uses XWayland. AppImage requires system pactl and desktop libraries. Display brightness and night light currently open desktop settings; integrated display sliders are not yet ported. Linux desktop acceptance testing is still required.'
+          test "$TAG" = linux-v3.1.1
+          gh release create --verify-tag "$TAG" artifacts/* --repo "$GITHUB_REPOSITORY" --title 'TrayMixer 3.1.1 for Linux' --prerelease --notes 'Linux x86_64 preview for Ubuntu 24.04 and compatible distributions. This update improves autostart and settings writes, updates Avalonia and SkiaSharp, and verifies the runtime embedded in the AppImage. DEB, RPM and AppImage downloads are available. GNOME needs AppIndicator support. Display and night-light controls open desktop settings.'

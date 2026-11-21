@@ -16,7 +16,7 @@ internal static class Program
     public static void Main(string[] args)
     {
         using var instance = new Mutex(true, "TrayMixer.Linux." + Environment.UserName, out var created);
-        if (!created) { Instance.ActivateExisting(); return; }
+        if (!created) { if (!args.Contains("--tray")) Instance.ActivateExisting(); return; }
         AppBuilder.Configure<MixerApp>().UsePlatformDetect().LogToTrace().StartWithClassicDesktopLifetime(args);
     }
 }
@@ -161,7 +161,7 @@ sealed class RowControl : Border
         var hideItem = new MenuItem { Header = "Hide this row" }; hideItem.Click += (_, _) => hide(); ContextMenu = new ContextMenu { ItemsSource = new[] { hideItem } };
         slider.PropertyChanged += (_, e) => { if (e.Property == Slider.ValueProperty && !syncing) { owner.MarkEdit(); Queue(); } };
         slider.PointerWheelChanged += (_, e) => { slider.Value = Math.Clamp(slider.Value + Math.Sign(e.Delta.Y) * 2, 0, 100); e.Handled = true; };
-        debounce.Tick += async (_, _) =>
+        debounce.Tick += (_, _) =>
         {
             debounce.Stop();
             if (sending) { debounce.Start(); return; }

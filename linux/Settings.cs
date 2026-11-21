@@ -15,9 +15,7 @@ public sealed class Settings
     }
     public void Save()
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        File.WriteAllText(FilePath + ".tmp", JsonSerializer.Serialize(this));
-        File.Move(FilePath + ".tmp", FilePath, true);
+        WriteAtomically(FilePath, JsonSerializer.Serialize(this));
     }
     static string AutostartPath => Path.Combine(ConfigRoot, "autostart", "traymixer.desktop");
     public static bool Autostart => File.Exists(AutostartPath);
@@ -26,9 +24,27 @@ public sealed class Settings
         if (!enabled) { File.Delete(AutostartPath); return; }
         // APPIMAGE is the installed portable file, not its temporary mount point.
         var executable = Environment.GetEnvironmentVariable("APPIMAGE") ?? Environment.ProcessPath ?? throw new IOException("Executable path unavailable");
-        if (executable.Contains('\n') || executable.Contains('\r')) throw new IOException("Invalid executable path");
-        var escaped = executable.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("`", "\\`").Replace("$", "\\$").Replace("%", "%%");
-        Directory.CreateDirectory(Path.GetDirectoryName(AutostartPath)!);
-        File.WriteAllText(AutostartPath, "[Desktop Entry]\nType=Application\nName=TrayMixer\nExec=\"" + escaped + "\" --tray\nIcon=traymixer\nTerminal=false\n");
+        if (!Path.IsPathFullyQualified(executable) || !File.Exists(executable) || executable.Any(char.IsControl) || executable.Contains('='))
+            throw new IOException("Invalid executable path");
+        var quoted = executable.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("`", "\\`").Replace("$", "\\$").Replace("%", "%%");
+        var escaped = quoted.Replace("\\", "\\\\");
+        WriteAtomically(AutostartPath, "[Desktop Entry]\nType=Application\nName=TrayMixer\nExec=\"" + escaped + "\" --tray\nIcon=traymixer\nTerminal=false\n");
+    }
+
+    static void WriteAtomically(string path, string text)
+    {
+        var directory = Path.GetDirectoryName(path)!;
+        Directory.CreateDirectory(directory);
+        var temp = Path.Combine(directory, ".traymixer-" + Guid.NewGuid().ToString("N"));
+        var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
+        if (OperatingSystem.IsLinux()) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+        var stream = new FileStream(temp, options);
+        try
+        {
+            using (stream)
+            using (var writer = new StreamWriter(stream)) writer.Write(text);
+            File.Move(temp, path, true);
+        }
+        finally { File.Delete(temp); }
     }
 }

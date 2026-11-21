@@ -9,6 +9,9 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
 using System.Runtime.InteropServices;
+using System.Security;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -18,8 +21,8 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyTitle("TrayMixer")]
 [assembly: System.Reflection.AssemblyProduct("TrayMixer")]
 [assembly: System.Reflection.AssemblyDescription("Lightweight Windows 11 tray volume mixer")]
-[assembly: System.Reflection.AssemblyVersion("3.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("3.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("3.0.1.0")]
+[assembly: System.Reflection.AssemblyFileVersion("3.0.1.0")]
 
 namespace TrayMixer
 {
@@ -376,6 +379,7 @@ namespace TrayMixer
         Theme T = Theme.Load();
         readonly float s;
         readonly List<Item> items = new List<Item>();
+        int contentHeight, scrollOffset;
         readonly System.Windows.Forms.Timer sync = new System.Windows.Forms.Timer { Interval = 1000 };
         bool scanning;
         bool refreshAgain;
@@ -409,7 +413,8 @@ namespace TrayMixer
         internal static bool MotionEnabled { get { int enabled; return !SystemInformation.HighContrast && GetAnimation(0x1042, 0, out enabled, 0) && enabled != 0; } }
         internal const int AppearanceDuration = 200;
         internal static double EaseOut(double progress) { double p = Math.Max(0, Math.Min(1, progress)); return 1 - Math.Pow(1 - p, 3); }
-        public DateTime LastHide = DateTime.MinValue;
+        readonly Stopwatch hiddenFor = new Stopwatch();
+        public bool CanOpenFromTray { get { return !hiddenFor.IsRunning || hiddenFor.ElapsedMilliseconds > 300; } }
 
         public Popup(int backdrop, float scale)
         {
@@ -469,7 +474,7 @@ namespace TrayMixer
             T = nt; WallpaperGlass.RefreshAsync(this); ApplyBackdrop();
             appearance.Stop();
             if (items.Count == 0) RefreshContent(true);
-            else { SyncValues(); Place(Width, Height); }
+            else { SyncValues(); Place(S(W), contentHeight); }
             restingBounds = Bounds;
             bool animate = MotionEnabled;
             if (animate) Location = new Point(restingBounds.X, restingBounds.Y + S(12));
@@ -488,7 +493,8 @@ namespace TrayMixer
             FlushVolume(); Hide(); sync.Stop();
             Bounds = restingBounds;
             hoverItem = dragItem = null;
-            LastHide = DateTime.Now;
+            scrollOffset = 0;
+            hiddenFor.Restart();
         }
 
         protected override void Dispose(bool disposing)
@@ -503,7 +509,16 @@ namespace TrayMixer
             base.Dispose(disposing);
         }
         protected override void OnDeactivate(EventArgs e) { base.OnDeactivate(e); HidePopup(); }
-        protected override bool ProcessCmdKey(ref Message msg, Keys key) { if (key == Keys.Escape) { HidePopup(); return true; } return base.ProcessCmdKey(ref msg, key); }
+        protected override bool ProcessCmdKey(ref Message msg, Keys key)
+        {
+            if (key == Keys.Escape) { HidePopup(); return true; }
+            if (key == Keys.PageUp || key == Keys.PageDown)
+            {
+                ScrollBy(key == Keys.PageUp ? -ClientSize.Height : ClientSize.Height);
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, key);
+        }
 
         // ── Data ──
         public void SyncValues()
@@ -525,7 +540,8 @@ namespace TrayMixer
             if (scanning) { refreshAgain = true; rebuildAgain |= force; return; }
             // The first population stays synchronous; later discovery runs on MTA workers.
             if (items.Count == 0) {
-                try { var devs = Audio.Devices(); var apps = Audio.Apps(); Build(devs, apps, Brightness.Displays); } catch { }
+                try { Build(Audio.Devices(), Audio.Apps(), Brightness.Displays); }
+                catch { Build(new List<DeviceInfo>(), new List<AppInfo>(), Brightness.Displays); }
                 return;
             }
             scanning = true;
@@ -618,22 +634,34 @@ namespace TrayMixer
                 y += it.H;
                 if (it.K == Kind.Row) it.Sync();
             }
-            // A periodic binding refresh must not move the panel to the cursor's monitor.
-            if (Width != S(W) || Height != y) {
-                if (Visible) {
-                    var screen = Screen.FromControl(this);
-                    restingBounds = FlyoutPlacement.Bounds(screen.Bounds, screen.WorkingArea, new Size(S(W), y), S(12));
-                    Bounds = restingBounds;
-                } else Place(S(W), y);
-            }
+            contentHeight = y;
+            var screen = Visible ? Screen.FromControl(this) : Screen.FromPoint(Cursor.Position);
+            PlaceOnScreen(screen, S(W), contentHeight);
             Invalidate();
         }
 
         void Place(int w, int h)
         {
-            var scr = Screen.FromPoint(Cursor.Position);
-            restingBounds = FlyoutPlacement.Bounds(scr.Bounds, scr.WorkingArea, new Size(w, h), S(12));
-            Bounds = restingBounds;
+            PlaceOnScreen(Screen.FromPoint(Cursor.Position), w, h);
+        }
+
+        void PlaceOnScreen(Screen screen, int w, int h)
+        {
+            var area = screen.WorkingArea;
+            var size = new Size(Math.Min(w, area.Width), Math.Min(h, Math.Max(1, area.Height - S(24))));
+            restingBounds = FlyoutPlacement.Bounds(screen.Bounds, area, size, S(12));
+            if (Bounds != restingBounds) Bounds = restingBounds;
+            ScrollBy(0);
+        }
+
+        void ScrollBy(int delta)
+        {
+            int next = Math.Max(0, Math.Min(scrollOffset + delta, contentHeight - ClientSize.Height));
+            if (next == scrollOffset) return;
+            scrollOffset = next;
+            hoverItem = null;
+            hoverPart = 0;
+            Invalidate();
         }
 
         // ── Row geometry (compact: icon on the left, title above the slider) ──
@@ -652,31 +680,41 @@ namespace TrayMixer
         {
             int w = ClientSize.Width, h = ClientSize.Height;
             if (w <= 0 || h <= 0) return;
-            EnsureDib(w, h);
+            if (!EnsureDib(w, h)) { Render(e.Graphics); return; }
             using (var g = Graphics.FromImage(surface)) Render(g);
             Native.GdiFlush();
             IntPtr hdc = e.Graphics.GetHdc();
-            Native.BitBlt(hdc, 0, 0, w, h, memDC, 0, 0, 0x00CC0020);
-            e.Graphics.ReleaseHdc(hdc);
+            try { Native.BitBlt(hdc, 0, 0, w, h, memDC, 0, 0, 0x00CC0020); }
+            finally { e.Graphics.ReleaseHdc(hdc); }
         }
 
-        void EnsureDib(int w, int h)
+        bool EnsureDib(int w, int h)
         {
-            if (dib != IntPtr.Zero && w == dibW && h == dibH) return;
+            if (surface != null && w == dibW && h == dibH) return true;
             FreeDib();
             var bi = new Native.BITMAPINFOHEADER { biSize = 40, biWidth = w, biHeight = -h, biPlanes = 1, biBitCount = 32 };
             IntPtr bits;
             dib = Native.CreateDIBSection(IntPtr.Zero, ref bi, 0, out bits, IntPtr.Zero, 0);
+            if (dib == IntPtr.Zero || bits == IntPtr.Zero) { FreeDib(); return false; }
             memDC = Native.CreateCompatibleDC(IntPtr.Zero);
+            if (memDC == IntPtr.Zero) { FreeDib(); return false; }
             oldBmp = Native.SelectObject(memDC, dib);
-            surface = new Bitmap(w, h, w * 4, PixelFormat.Format32bppPArgb, bits);
+            if (oldBmp == IntPtr.Zero || oldBmp == new IntPtr(-1)) { FreeDib(); return false; }
+            try { surface = new Bitmap(w, h, w * 4, PixelFormat.Format32bppPArgb, bits); }
+            catch (ArgumentException) { FreeDib(); return false; }
+            catch (OutOfMemoryException) { FreeDib(); return false; }
             dibW = w; dibH = h;
+            return true;
         }
 
         void FreeDib()
         {
             if (surface != null) { surface.Dispose(); surface = null; }
-            if (memDC != IntPtr.Zero) { Native.SelectObject(memDC, oldBmp); Native.DeleteDC(memDC); memDC = IntPtr.Zero; }
+            if (memDC != IntPtr.Zero)
+            {
+                if (oldBmp != IntPtr.Zero && oldBmp != new IntPtr(-1)) Native.SelectObject(memDC, oldBmp);
+                Native.DeleteDC(memDC); memDC = IntPtr.Zero; oldBmp = IntPtr.Zero;
+            }
             if (dib != IntPtr.Zero) { Native.DeleteObject(dib); dib = IntPtr.Zero; }
         }
 
@@ -686,15 +724,25 @@ namespace TrayMixer
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            var drawingState = g.Save();
+            g.TranslateTransform(0, -scrollOffset);
             using (var sf = new StringFormat(StringFormat.GenericTypographic) { LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap })
             {
                 foreach (var it in items)
                 {
+                    if (it.Y + it.H <= scrollOffset || it.Y >= scrollOffset + ClientSize.Height) continue;
                     if (it.K == Kind.Footer) DrawFooter(g, it, sf);
                     else if (it.K == Kind.Note) Str(g, it.Text, fText, T.Sub, new RectangleF(S(M), it.Y, Width - S(2 * M), it.H), sf);
                     else if (it.K == Kind.Sep) using (var b = new SolidBrush(T.Sep)) g.FillRectangle(b, S(M), it.Y + it.H / 2, Width - S(2 * M), Math.Max(1, S(1)));
                     else DrawRow(g, it, sf);
                 }
+            }
+            g.Restore(drawingState);
+            if (contentHeight > ClientSize.Height)
+            {
+                int thumb = Math.Min(ClientSize.Height, Math.Max(S(16), (int)((long)ClientSize.Height * ClientSize.Height / contentHeight)));
+                int top = (int)((long)(ClientSize.Height - thumb) * scrollOffset / (contentHeight - ClientSize.Height));
+                using (var brush = new SolidBrush(T.Sub)) g.FillRectangle(brush, Width - S(5), top, S(3), thumb);
             }
         }
 
@@ -795,6 +843,7 @@ namespace TrayMixer
         // ── Mouse ──
         Item RowAt(Point p)
         {
+            p.Y += scrollOffset;
             foreach (var it in items)
             {
                 if ((it.K == Kind.Row || it.K == Kind.Footer) && p.Y >= it.Y && p.Y < it.Y + it.H) return it;
@@ -805,6 +854,7 @@ namespace TrayMixer
         int PartAt(Item it, Point p)
         {
             if (it == null) return 0;
+            p.Y += scrollOffset;
             if (it.K == Kind.Footer)
             {
                 for (int i = 0; i < FooterUris.Length; i++) if (FooterBtn(it, i).Contains(p)) return 4 + i;
@@ -879,6 +929,11 @@ namespace TrayMixer
 
         protected override void OnMouseWheel(MouseEventArgs e)
         {
+            if ((ModifierKeys & Keys.Shift) != 0 || e.X < S(M) || e.X >= Width - S(M))
+            {
+                ScrollBy(e.Delta > 0 ? -S(54) : S(54));
+                return;
+            }
             var it = RowAt(e.Location);
             if (it == null || it.K != Kind.Row) return;
             // Touchpads send many small deltas: collect them and step once per full notch (120)
@@ -1161,11 +1216,128 @@ namespace TrayMixer
         }
     }
 
-    // ───────────────────────── Tray ─────────────────────────
-    class TrayApp
+    sealed class TrayIcon : NativeWindow, IDisposable
     {
+        const int Add = 0, Modify = 1, Delete = 2;
+        const int CallbackMessage = 0x8001; // WM_APP + 1
+        static readonly int TaskbarCreated = RegisterWindowMessage("TaskbarCreated");
+        readonly System.Windows.Forms.Timer retry = new System.Windows.Forms.Timer { Interval = 1000 };
+        readonly Action<MouseButtons> click;
+        Icon icon;
+        string text;
+        bool added, doubleClick;
+
+        public TrayIcon(Action<MouseButtons> click)
+        {
+            this.click = click;
+            CreateHandle(new CreateParams());
+            retry.Tick += delegate { Publish(); };
+        }
+
+        public void Update(Icon replacement, string tooltip)
+        {
+            if (replacement != null)
+            {
+                if (icon != null) icon.Dispose();
+                icon = replacement;
+            }
+            text = tooltip;
+            Publish();
+        }
+
+        void Publish()
+        {
+            if (icon == null) return;
+            var data = MakeData();
+            // Explorer can reject registration while the notification area is starting.
+            added = (added && Shell_NotifyIcon(Modify, ref data)) || Shell_NotifyIcon(Add, ref data);
+            retry.Enabled = !added;
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == TaskbarCreated && TaskbarCreated != 0)
+            {
+                Publish();
+            }
+            else if (m.Msg == CallbackMessage && m.WParam == (IntPtr)1)
+            {
+                switch (m.LParam.ToInt64())
+                {
+                    case 0x0202: MouseUp(MouseButtons.Left); break;   // WM_LBUTTONUP
+                    case 0x0205: MouseUp(MouseButtons.Right); break;  // WM_RBUTTONUP
+                    case 0x0208: MouseUp(MouseButtons.Middle); break; // WM_MBUTTONUP
+                    case 0x0203: // WM_LBUTTONDBLCLK
+                    case 0x0206: // WM_RBUTTONDBLCLK
+                    case 0x0209: // WM_MBUTTONDBLCLK
+                        doubleClick = true;
+                        break;
+                }
+                return;
+            }
+            base.WndProc(ref m);
+        }
+
+        void MouseUp(MouseButtons button)
+        {
+            bool singleClick = !doubleClick;
+            doubleClick = false;
+            if (singleClick) click(button);
+        }
+
+        public void Dispose()
+        {
+            retry.Dispose();
+            if (added)
+            {
+                var data = MakeData();
+                Shell_NotifyIcon(Delete, ref data);
+            }
+            DestroyHandle();
+            if (icon != null) icon.Dispose();
+        }
+
+        NotifyIconData MakeData()
+        {
+            return new NotifyIconData
+            {
+                Size = Marshal.SizeOf(typeof(NotifyIconData)), Window = Handle, Id = 1,
+                Flags = 0x07, Callback = CallbackMessage, Icon = icon.Handle, Tip = text
+            };
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        static extern int RegisterWindowMessage(string name);
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        static extern bool Shell_NotifyIcon(int message, ref NotifyIconData data);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        struct NotifyIconData
+        {
+            public int Size;
+            public IntPtr Window;
+            public int Id, Flags, Callback;
+            public IntPtr Icon;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string Tip;
+            public int State, StateMask;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)] public string Info;
+            public int Version;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)] public string InfoTitle;
+            public int InfoFlags;
+            public Guid Guid;
+            public IntPtr BalloonIcon;
+        }
+    }
+
+    // ───────────────────────── Tray ─────────────────────────
+    class TrayApp : IDisposable
+    {
+        public const string StartupArgument = "--startup";
         const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run", AppName = "TrayMixer", CfgKey = @"Software\TrayMixer";
-        readonly NotifyIcon icon = new NotifyIcon();
+        readonly TrayIcon icon;
+        readonly TrayFlyout flyout;
+        readonly System.Windows.Forms.Timer audioRetry = new System.Windows.Forms.Timer { Interval = 1000 };
+        IMMDeviceEnumerator audioEnumerator;
         readonly Popup popup;
         readonly Notifier notifier;
         IAudioEndpointVolume defVol;
@@ -1187,12 +1359,12 @@ namespace TrayMixer
             hiddenItem.Popup += delegate { FillHidden(hiddenItem); };
             var menuModel = CreateTrayMenu(verStr, hiddenItem, micaItem, acrylicItem, autoItem,
                 () => Open("ms-settings:sound"), () => Open("ms-settings:apps-volume"),
-                () => { icon.Visible = false; BlueLight.Reset(); Application.Exit(); });
-            var flyout = new TrayFlyout(menuModel, scale);
-            icon.MouseClick += delegate(object sender, MouseEventArgs e) {
-                if (e.Button == MouseButtons.Right) { popup.HidePopup(); FillHidden(hiddenItem); flyout.ShowFlyout(); }
-                else { flyout.Close(); OnTrayClick(sender, e); }
-            };
+                () => Application.Exit());
+            flyout = new TrayFlyout(menuModel, scale);
+            icon = new TrayIcon(button => {
+                if (button == MouseButtons.Right) { popup.HidePopup(); FillHidden(hiddenItem); flyout.ShowFlyout(); }
+                else { flyout.Close(); OnTrayClick(button); }
+            });
             UpdateChecks();
 
             notifier = new Notifier(popup)
@@ -1201,14 +1373,55 @@ namespace TrayMixer
                 DevicesChanged = () => { Rebind(); if (popup.Visible) popup.RefreshContent(true); }
             };
             UpdateTray();
-            icon.Visible = true;
+            audioRetry.Tick += delegate { ConnectAudio(); };
             WallpaperGlass.RefreshAsync(popup);
             popup.BeginInvoke((Action)(() => {
-                try { Audio.En.RegisterEndpointNotificationCallback(notifier); } catch { }
-                Rebind();
+                ConnectAudio();
                 Brightness.ScanAsync(null);
                 BlueLight.Start();
             }));
+        }
+
+        public void RequestOpen()
+        {
+            try
+            {
+                popup.BeginInvoke((Action)delegate
+                {
+                    flyout.Close();
+                    if (popup.Visible) popup.Activate();
+                    else popup.ShowPopup();
+                });
+            }
+            catch (InvalidOperationException) { } // The window is closing.
+        }
+
+        public void Dispose()
+        {
+            audioRetry.Dispose();
+            if (defVol != null) try { defVol.UnregisterControlChangeNotify(notifier); } catch { }
+            if (audioEnumerator != null) try { audioEnumerator.UnregisterEndpointNotificationCallback(notifier); } catch { }
+            icon.Dispose();
+            flyout.Dispose();
+            popup.Dispose();
+        }
+
+        void ConnectAudio()
+        {
+            try
+            {
+                var enumerator = Audio.En;
+                enumerator.RegisterEndpointNotificationCallback(notifier);
+                audioEnumerator = enumerator;
+            }
+            catch
+            {
+                // Windows Audio may still be starting when the user signs in.
+                audioRetry.Start();
+                return;
+            }
+            audioRetry.Stop();
+            Rebind();
         }
 
         // Keep frequent actions at the top level; less frequent preferences share one submenu.
@@ -1260,14 +1473,14 @@ namespace TrayMixer
 
         void UpdateChecks() { micaItem.Checked = popup.Backdrop == Popup.Mica; acrylicItem.Checked = popup.Backdrop == Popup.Acrylic; }
 
-        void OnTrayClick(object s, MouseEventArgs e)
+        void OnTrayClick(MouseButtons button)
         {
-            if (e.Button == MouseButtons.Left)
+            if (button == MouseButtons.Left)
             {
                 if (popup.Visible) popup.HidePopup();
-                else if ((DateTime.Now - popup.LastHide).TotalMilliseconds > 300) popup.ShowPopup();
+                else if (popup.CanOpenFromTray) popup.ShowPopup();
             }
-            else if (e.Button == MouseButtons.Middle && defVol != null)
+            else if (button == MouseButtons.Middle && defVol != null)
             {
                 try { bool m; defVol.GetMute(out m); defVol.SetMute(!m, ref Audio.Ctx); } catch { }
             }
@@ -1288,12 +1501,13 @@ namespace TrayMixer
             }
             catch { }
             bool light = Theme.TaskbarLight();
+            Icon replacement = null;
             if (glyph != lastGlyph || light != lastLight)
             {
-                var old = icon.Icon; icon.Icon = MakeIcon(glyph == "off", light); if (old != null) old.Dispose();
+                replacement = MakeIcon(glyph == "off", light);
                 lastGlyph = glyph; lastLight = light;
             }
-            icon.Text = text;
+            icon.Update(replacement, text);
         }
 
         static Icon MakeIcon(bool dim, bool light)
@@ -1310,25 +1524,58 @@ namespace TrayMixer
 
         static void Open(string uri) { try { Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true }); } catch { } }
 
-        public static bool IsAutostart()
+        static bool IsAutostart()
         {
-            using (var k = Registry.CurrentUser.OpenSubKey(RunKey)) return k != null && k.GetValue(AppName) != null;
+            try { using (var k = Registry.CurrentUser.OpenSubKey(RunKey)) return k != null && k.GetValue(AppName) != null; }
+            catch (UnauthorizedAccessException) { return false; }
+            catch (SecurityException) { return false; }
+            catch (System.IO.IOException) { return false; }
         }
 
-        public static void SetAutostart(bool on)
+        static string StartupCommand { get { return "\"" + Application.ExecutablePath + "\" " + StartupArgument; } }
+
+        public static void InitializeAutostart()
+        {
+            try
+            {
+                using (var config = Registry.CurrentUser.CreateSubKey(CfgKey))
+                using (var run = Registry.CurrentUser.OpenSubKey(RunKey))
+                {
+                    var existing = run == null ? null : run.GetValue(AppName, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+                    bool firstRun = config.GetValue("Initialized") == null;
+                    string legacyCommand = "\"" + Application.ExecutablePath + "\"";
+                    if ((firstRun && existing == null) || string.Equals(existing as string, legacyCommand, StringComparison.OrdinalIgnoreCase))
+                        SetAutostart(true);
+                    if (firstRun) config.SetValue("Initialized", 1);
+                }
+            }
+            catch (UnauthorizedAccessException) { }
+            catch (SecurityException) { }
+            catch (System.IO.IOException) { }
+        }
+
+        static void SetAutostart(bool on)
         {
             using (var k = Registry.CurrentUser.CreateSubKey(RunKey))
             {
-                if (on) k.SetValue(AppName, "\"" + Application.ExecutablePath + "\"");
+                if (on) k.SetValue(AppName, StartupCommand, RegistryValueKind.String);
                 else k.DeleteValue(AppName, false);
             }
         }
 
-        void ToggleAutostart() { SetAutostart(!IsAutostart()); autoItem.Checked = IsAutostart(); }
+        void ToggleAutostart()
+        {
+            try { SetAutostart(!IsAutostart()); }
+            catch (UnauthorizedAccessException) { }
+            catch (SecurityException) { }
+            catch (System.IO.IOException) { }
+            autoItem.Checked = IsAutostart();
+        }
     }
 
     static class Program
     {
+        const string InstanceName = @"Local\TrayMixer_7c1f3e2a-5b0d-4f9e-9a61-2d8c4b7e1a90";
         [STAThread]
         static void Main(string[] args)
         {
@@ -1342,16 +1589,33 @@ namespace TrayMixer
             if (args.Length > 1 && args[0] == "--render" && args[1].EndsWith(".png", StringComparison.OrdinalIgnoreCase)) { var p = new Popup(Popup.Mica, scale); p.CreateControl(); p.RenderTo(args[1], Color.FromArgb(32, 32, 32)); return; }
             // Used by the uninstaller: put the screens back to normal gamma after the process was killed, then quit
             if (args.Length > 0 && args[0] == "--reset-gamma") { Environment.ExitCode = BlueLight.Reset() ? 0 : 1; return; }
+            using (var identity = WindowsIdentity.GetCurrent()) Run(scale, args.Length > 0 && args[0] == TrayApp.StartupArgument, identity.User);
+        }
+
+        static void Run(float scale, bool startup, SecurityIdentifier user)
+        {
+            string name = InstanceName + "_" + user.Value;
+            var mutexAcl = new MutexSecurity();
+            mutexAcl.AddAccessRule(new MutexAccessRule(user, MutexRights.FullControl, AccessControlType.Allow));
+            var eventAcl = new EventWaitHandleSecurity();
+            eventAcl.AddAccessRule(new EventWaitHandleAccessRule(user, EventWaitHandleRights.FullControl, AccessControlType.Allow));
             bool created;
-            using (new Mutex(true, @"Local\TrayMixer_7c1f3e2a-5b0d-4f9e-9a61-2d8c4b7e1a90", out created))
+            using (var openRequest = new EventWaitHandle(false, EventResetMode.AutoReset, name + "_Open", out created, eventAcl))
+            using (new Mutex(true, name, out created, mutexAcl))
             {
-                if (!created) return;
-                // Autostart is switched on at first launch; the path is refreshed if the exe was moved
-                using (var k = Registry.CurrentUser.CreateSubKey(@"Software\TrayMixer"))
-                    if (k.GetValue("Initialized") == null) { TrayApp.SetAutostart(true); k.SetValue("Initialized", 1); }
-                if (TrayApp.IsAutostart()) TrayApp.SetAutostart(true);
-                new TrayApp(scale);
-                Application.Run();
+                if (!created)
+                {
+                    if (!startup) openRequest.Set();
+                    return;
+                }
+                if (!startup) TrayApp.InitializeAutostart();
+                using (var app = new TrayApp(scale))
+                {
+                    var wait = ThreadPool.RegisterWaitForSingleObject(openRequest,
+                        delegate { app.RequestOpen(); }, null, Timeout.Infinite, false);
+                    try { Application.Run(); }
+                    finally { wait.Unregister(null); }
+                }
             }
         }
     }

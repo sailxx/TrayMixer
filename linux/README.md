@@ -1,4 +1,4 @@
-# TrayMixer for Linux — 3.1.0 preview
+# TrayMixer for Linux — 3.1.1 preview
 
 A separate C# / Avalonia desktop port. The existing Windows source and installer are unchanged.
 
@@ -10,9 +10,9 @@ x86_64 Linux, glibc 2.35+, X11 or XWayland, PulseAudio 15+ or PipeWire with `pip
 
 Download a DEB, RPM or AppImage from the Linux preview release.
 
-- Ubuntu/Debian: `sudo apt install ./TrayMixer_3.1.0_amd64.deb`
-- Fedora: `sudo dnf install ./TrayMixer-3.1.0-1.x86_64.rpm`
-- AppImage: `chmod +x TrayMixer-3.1.0-x86_64.AppImage`, then run it. Requires system `pactl`, X11 libraries, fontconfig, ICU and OpenSSL. Install `pulseaudio-utils` on Ubuntu/Fedora. FUSE 2 or `--appimage-extract-and-run` may be required. AppImage bundles .NET, not the system audio server or desktop libraries.
+- Ubuntu/Debian: `sudo apt install ./TrayMixer_3.1.1_amd64.deb`
+- Fedora: `sudo dnf install ./TrayMixer-3.1.1-1.x86_64.rpm`
+- AppImage: `chmod +x TrayMixer-3.1.1-x86_64.AppImage`, then run it. Requires system `pactl`, X11 libraries, fontconfig, ICU and OpenSSL. Install `pulseaudio-utils` on Ubuntu/Fedora. FUSE 2 or `--appimage-extract-and-run` may be required. AppImage bundles .NET, not the system audio server or desktop libraries.
 
 Launch **TrayMixer** from the application menu. The first launch opens the mixer; closing it keeps the tray icon running. Exit from the tray menu. GNOME Shell needs an AppIndicator/StatusNotifier extension (Ubuntu normally includes one). Without a tray host, do not enable tray-only autostart; use the application menu to launch. Launching again asks the existing process to reopen its window through a current-user-only local pipe.
 
@@ -39,7 +39,7 @@ cd TrayMixer
 dotnet run --project linux/tests/TrayMixer.Linux.Tests.csproj -c Release
 dotnet run --project linux/TrayMixer.Linux.csproj
 # Packaging requires dpkg-deb, rpm/rpmbuild and curl:
-bash linux/package.sh 3.1.0
+bash linux/package.sh 3.1.1
 ```
 
 On the current Windows development machine:

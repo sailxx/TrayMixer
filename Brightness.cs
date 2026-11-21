@@ -15,7 +15,7 @@ namespace TrayMixer
         public string Key, Name;
         public bool Internal;
         internal IntPtr Phys;            // physical monitor for DDC/CI (external displays)
-        int min, max = 100;
+        uint min, max = 100;
         volatile int cur;                // 0–100
         readonly object io = new object(), q = new object();
         int want = -1; bool busy;
@@ -46,7 +46,7 @@ namespace TrayMixer
                 try
                 {
                     if (Internal) Brightness.WmiSet(pct);
-                    else if (Phys != IntPtr.Zero) Native.SetMonitorBrightness(Phys, (uint)(min + (max - min) * pct / 100));
+                    else if (Phys != IntPtr.Zero) Native.SetMonitorBrightness(Phys, min + (uint)((ulong)(max - min) * (uint)pct / 100));
                 }
                 catch { }
             }
@@ -63,8 +63,8 @@ namespace TrayMixer
                     if (Internal) { int v; if (!Brightness.WmiGet(out v)) return false; cur = v; return true; }
                     uint mn, c, mx;
                     if (Phys == IntPtr.Zero || !Native.GetMonitorBrightness(Phys, out mn, out c, out mx) || mx <= mn) return false;
-                    min = (int)mn; max = (int)mx;
-                    cur = (int)Math.Round(((int)c - min) * 100.0 / (max - min));
+                    min = mn; max = mx;
+                    cur = (int)Math.Round((Math.Min(max, Math.Max(min, c)) - min) * 100.0 / (max - min));
                     return true;
                 }
                 catch { return false; }
@@ -143,7 +143,7 @@ namespace TrayMixer
                             if (Native.GetPhysicalMonitorsFromHMONITOR(hMon, n, pm))
                             {
                                 d.Phys = pm[0].h;
-                                if (string.IsNullOrEmpty(d.Name) && !pm[0].desc.StartsWith("Generic")) d.Name = pm[0].desc;
+                                if (string.IsNullOrEmpty(d.Name) && !string.IsNullOrEmpty(pm[0].desc) && !pm[0].desc.StartsWith("Generic")) d.Name = pm[0].desc;
                                 for (int i = 1; i < n; i++) Native.DestroyPhysicalMonitor(pm[i].h);
                             }
                         }
@@ -184,7 +184,7 @@ namespace TrayMixer
                 uint np, nm;
                 if (Native.GetDisplayConfigBufferSizes(2, out np, out nm) != 0) return res; // QDC_ONLY_ACTIVE_PATHS
                 var paths = new Native.DISPLAYCONFIG_PATH_INFO[np];
-                IntPtr modes = Marshal.AllocHGlobal((int)Math.Max(1, nm) * 64);
+                IntPtr modes = Marshal.AllocHGlobal(checked((int)Math.Max(1, nm) * 64));
                 try { if (Native.QueryDisplayConfig(2, ref np, paths, ref nm, modes, IntPtr.Zero) != 0) return res; }
                 finally { Marshal.FreeHGlobal(modes); }
                 for (int i = 0; i < np; i++)
