@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-VERSION="${1:-3.1.0}"
+VERSION="${1:-3.1.1}"
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid version'; exit 1; }
 ROOT="$PWD"
 OUT="$ROOT/linux/artifacts"
@@ -58,12 +58,15 @@ cp -a "$WORK/root" "$WORK/TrayMixer.AppDir"
 cp linux/packaging/traymixer.desktop linux/packaging/traymixer.svg "$WORK/TrayMixer.AppDir/"
 cp linux/packaging/AppRun "$WORK/TrayMixer.AppDir/AppRun"
 chmod 755 "$WORK/TrayMixer.AppDir/AppRun"
-# Download an exact asset and reject replacement or tampered bytes.
-curl --fail --location --retry 3 https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -o "$WORK/appimagetool"
-echo "e8c1169c4af66c3184d7ee110713d4be04befe671fa358e2c1591ee840553b03  $WORK/appimagetool" | sha256sum -c -
+# Verify both the executable build tool and the runtime embedded in the result.
+curl --fail --location --retry 3 https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage -o "$WORK/appimagetool"
+curl --fail --location --retry 3 https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64 -o "$WORK/runtime-x86_64"
+printf '%s  %s\n' \
+  ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0 "$WORK/appimagetool" \
+  2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d "$WORK/runtime-x86_64" | sha256sum --strict --check
 chmod 755 "$WORK/appimagetool"
 cd "$WORK"
 ./appimagetool --appimage-extract >/dev/null
-ARCH=x86_64 ./squashfs-root/AppRun "$WORK/TrayMixer.AppDir" "$OUT/TrayMixer-${VERSION}-x86_64.AppImage"
+ARCH=x86_64 ./squashfs-root/AppRun --runtime-file "$WORK/runtime-x86_64" "$WORK/TrayMixer.AppDir" "$OUT/TrayMixer-${VERSION}-x86_64.AppImage"
 cd "$OUT"
-sha256sum ./*.deb ./*.rpm ./*.AppImage > SHA256SUMS
+sha256sum "TrayMixer_${VERSION}_amd64.deb" "TrayMixer-${VERSION}-1.x86_64.rpm" "TrayMixer-${VERSION}-x86_64.AppImage" > SHA256SUMS

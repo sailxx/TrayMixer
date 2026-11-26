@@ -1,4 +1,4 @@
-// TrayMixer: Core Audio access (devices, application sessions).
+// TrayMixer — работа с Core Audio (устройства, сессии приложений).
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -34,7 +34,7 @@ namespace TrayMixer
         void UnregisterEndpointNotificationCallback(IMMNotificationClient client);
     }
 
-    // Windows notifications instead of constant polling
+    // Уведомления Windows вместо постоянного опроса
     [ComImport, Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     interface IMMNotificationClient
     {
@@ -95,7 +95,11 @@ namespace TrayMixer
     }
 
     [ComImport, Guid("E2F5BB11-0570-40CA-ACDD-3AA01277DEE8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IAudioSessionEnumerator { void GetCount(out int c); void GetSession(int i, out IAudioSessionControl2 s); }
+    interface IAudioSessionEnumerator
+    {
+        void GetCount(out int c);
+        void GetSession(int i, [MarshalAs(UnmanagedType.IUnknown)] out object session);
+    }
 
     [ComImport, Guid("bfb7ff88-7239-4fc9-8fa2-07c950be9c6d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     interface IAudioSessionControl2
@@ -124,7 +128,7 @@ namespace TrayMixer
         void GetMute([MarshalAs(UnmanagedType.Bool)] out bool m);
     }
 
-    // Undocumented interface for changing the default device
+    // Недокументированный интерфейс для смены устройства по умолчанию
     [ComImport, Guid("f8679f50-850a-41cf-9c72-430f290290c8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     interface IPolicyConfig
     {
@@ -136,12 +140,12 @@ namespace TrayMixer
     static partial class Native
     {
         [DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr h);
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        public static extern uint ExtractIconEx(string path, int index, IntPtr largeIcons, out IntPtr smallIcon, uint count);
         [DllImport("ole32.dll")] public static extern int PropVariantClear(ref PROPVARIANT pv);
         [DllImport("kernel32.dll")] public static extern IntPtr OpenProcess(int access, bool inherit, int pid);
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] public static extern bool QueryFullProcessImageName(IntPtr h, int flags, StringBuilder sb, ref int size);
         [DllImport("kernel32.dll")] public static extern bool CloseHandle(IntPtr h);
-        [DllImport("kernel32.dll")] public static extern bool SetProcessWorkingSetSize(IntPtr h, IntPtr min, IntPtr max);
-        [DllImport("kernel32.dll")] public static extern IntPtr GetCurrentProcess();
         [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
         [DllImport("kernel32.dll")] public static extern bool SetDefaultDllDirectories(int flags);
         [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
@@ -165,23 +169,31 @@ namespace TrayMixer
             public int biCompression, biSizeImage, biXPelsPerMeter, biYPelsPerMeter, biClrUsed, biClrImportant;
         }
 
-        // Give unused memory back to the system.
-        // No WaitForPendingFinalizers here: it runs on the UI thread and can stall it behind COM wrappers.
-        public static void Trim()
-        {
-            GC.Collect();
-            SetProcessWorkingSetSize(GetCurrentProcess(), (IntPtr)(-1), (IntPtr)(-1));
-        }
     }
 
-    // ───────────────────────── Model ─────────────────────────
+    // ───────────────────────── Модель ─────────────────────────
     class DeviceInfo { public string Id, Name; public bool IsDefault, IsHeadphones, IsDisplay; public IAudioEndpointVolume Vol; }
-    class AppInfo { public string Key, Name; public Bitmap Img; public bool IsSystem; public List<ISimpleAudioVolume> Vols = new List<ISimpleAudioVolume>(); }
+    class AppInfo
+    {
+        public string Key, Name;
+        public Bitmap Img;
+        public bool IsSystem;
+        public readonly List<ISimpleAudioVolume> Vols = new List<ISimpleAudioVolume>();
+        public readonly List<string> SessionIds = new List<string>();
+    }
 
     static class Audio
     {
+        const int InProcessServer = 1;
         [ThreadStatic] static IMMDeviceEnumerator enumerator;
-        public static IMMDeviceEnumerator En { get { return enumerator ?? (enumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorCo()); } }
+        public static IMMDeviceEnumerator En
+        {
+            get
+            {
+                if (enumerator == null) enumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorCo();
+                return enumerator;
+            }
+        }
         static Guid IID_EPV = typeof(IAudioEndpointVolume).GUID;
         static Guid IID_ASM2 = typeof(IAudioSessionManager2).GUID;
         static PROPERTYKEY PK_Name = new PROPERTYKEY(new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"), 14);
@@ -204,7 +216,7 @@ namespace TrayMixer
 
         public static IAudioEndpointVolume EndpointVolume(IMMDevice d)
         {
-            object o; d.Activate(ref IID_EPV, 23, IntPtr.Zero, out o);
+            object o; d.Activate(ref IID_EPV, InProcessServer, IntPtr.Zero, out o);
             return (IAudioEndpointVolume)o;
         }
 
@@ -225,7 +237,7 @@ namespace TrayMixer
                     IPropertyStore ps; d.OpenPropertyStore(0, out ps);
                     PROPVARIANT v;
                     ps.GetValue(ref PK_Name, out v);
-                    di.Name = v.vt == 31 ? Marshal.PtrToStringUni(v.p) : "Device";
+                    di.Name = v.vt == 31 && v.p != IntPtr.Zero ? CleanName(Marshal.PtrToStringUni(v.p)) : Loc.Text("Устройство", "Device");
                     Native.PropVariantClear(ref v);
                     ps.GetValue(ref PK_FormFactor, out v);
                     di.IsHeadphones = v.vt == 19 && (v.uintVal == 3 || v.uintVal == 5);
@@ -246,7 +258,7 @@ namespace TrayMixer
             var map = new Dictionary<string, AppInfo>();
             var order = new List<AppInfo>();
             var dev = Default(); if (dev == null) return order;
-            object o; dev.Activate(ref IID_ASM2, 23, IntPtr.Zero, out o);
+            object o; dev.Activate(ref IID_ASM2, InProcessServer, IntPtr.Zero, out o);
             var mgr = (IAudioSessionManager2)o;
             IAudioSessionEnumerator en; mgr.GetSessionEnumerator(out en);
             int n; en.GetCount(out n);
@@ -254,28 +266,33 @@ namespace TrayMixer
             {
                 try
                 {
-                    IAudioSessionControl2 s; en.GetSession(i, out s);
+                    object session; en.GetSession(i, out session);
+                    var s = session as IAudioSessionControl2;
+                    var volume = session as ISimpleAudioVolume;
+                    if (s == null || volume == null) continue;
                     int state; s.GetState(out state);
                     if (state == 2) continue; // expired
                     bool sys = s.IsSystemSoundsSession() == 0;
                     int pid = 0; s.GetProcessId(out pid);
                     string path = sys ? null : ProcPath(pid);
                     if (!sys && path == null && !Alive(pid)) continue;
+                    string sessionId; s.GetSessionInstanceIdentifier(out sessionId);
                     string key = sys ? "#sys" : (path ?? ("#pid" + pid));
                     AppInfo a;
                     if (!map.TryGetValue(key, out a))
                     {
                         a = new AppInfo { Key = key, IsSystem = sys };
-                        if (sys) a.Name = "System sounds";
+                        if (sys) a.Name = TrayMixer.Loc.En ? "System sounds" : "Системные звуки";
                         else
                         {
                             string dn; s.GetDisplayName(out dn);
-                            a.Name = !string.IsNullOrEmpty(dn) && !dn.StartsWith("@") ? dn : NameFor(path, pid);
+                            a.Name = !string.IsNullOrEmpty(dn) && !dn.StartsWith("@") ? CleanName(dn) : NameFor(path, pid);
                             a.Img = IconFor(path);
                         }
                         map[key] = a; order.Add(a);
                     }
-                    a.Vols.Add((ISimpleAudioVolume)s);
+                    a.Vols.Add(volume);
+                    a.SessionIds.Add(sessionId);
                 }
                 catch { }
             }
@@ -283,22 +300,26 @@ namespace TrayMixer
             return order;
         }
 
-        // Make the device the default for all three roles; false if Windows refused any of them
-        public static bool SetDefault(string id)
+        public static void SetDefault(string id)
         {
             IPolicyConfig pc = null;
             try
             {
                 pc = (IPolicyConfig)new PolicyConfigCo();
-                bool ok = true;
-                for (int r = 0; r < 3; r++) if (pc.SetDefaultEndpoint(id, r) < 0) ok = false;
-                return ok;
+                for (int r = 0; r < 3; r++) pc.SetDefaultEndpoint(id, r);
             }
-            catch { return false; }
+            catch { }
             finally { if (pc != null) Marshal.ReleaseComObject(pc); }
         }
 
-        static bool Alive(int pid) { try { Process.GetProcessById(pid); return true; } catch { return false; } }
+        public static void ClearMetadata()
+        {
+            foreach (var img in IconCache.Values) if (img != null) img.Dispose();
+            IconCache.Clear();
+            NameCache.Clear();
+        }
+
+        static bool Alive(int pid) { try { using (Process.GetProcessById(pid)) return true; } catch { return false; } }
 
         static string ProcPath(int pid)
         {
@@ -322,24 +343,55 @@ namespace TrayMixer
             {
                 try
                 {
-                    var fvi = FileVersionInfo.GetVersionInfo(path);
-                    if (!string.IsNullOrWhiteSpace(fvi.FileDescription)) name = fvi.FileDescription.Trim();
-                    else if (!string.IsNullOrWhiteSpace(fvi.ProductName)) name = fvi.ProductName.Trim();
+                    if (IsLocalExecutable(path))
+                    {
+                        var fvi = FileVersionInfo.GetVersionInfo(path);
+                        if (!string.IsNullOrWhiteSpace(fvi.FileDescription)) name = fvi.FileDescription;
+                        else if (!string.IsNullOrWhiteSpace(fvi.ProductName)) name = fvi.ProductName;
+                    }
                 }
                 catch { }
                 if (name == null) name = System.IO.Path.GetFileNameWithoutExtension(path);
-                NameCache[path] = name;
+                name = CleanName(name);
+                if (NameCache.Count < 256) NameCache[path] = name;
                 return name;
             }
-            try { return Process.GetProcessById(pid).ProcessName; } catch { return "Application"; }
+            try { using (var p = Process.GetProcessById(pid)) return CleanName(p.ProcessName); } catch { return Loc.Text("Приложение", "Application"); }
+        }
+
+        static string CleanName(string text)
+        {
+            var name = new StringBuilder();
+            foreach (char c in text)
+            {
+                if (name.Length >= 256) break;
+                if (!char.IsControl(c) && !(c >= '\u202a' && c <= '\u202e') && !(c >= '\u2066' && c <= '\u2069')) name.Append(c);
+            }
+            string result = name.ToString().Trim();
+            return result.Length == 0 ? Loc.Text("Приложение", "Application") : result;
+        }
+
+        static bool IsLocalExecutable(string path)
+        {
+            return path.Length > 3 && path[1] == ':' && path[2] == '\\' &&
+                string.Equals(System.IO.Path.GetExtension(path), ".exe", StringComparison.OrdinalIgnoreCase) &&
+                new System.IO.DriveInfo(path.Substring(0, 3)).DriveType == System.IO.DriveType.Fixed;
         }
 
         static Bitmap IconFor(string path)
         {
             if (path == null) return null;
-            Bitmap img;
+            Bitmap img = null;
             if (IconCache.TryGetValue(path, out img)) return img;
-            try { using (var ic = Icon.ExtractAssociatedIcon(path)) img = ic.ToBitmap(); } catch { img = null; }
+            if (IconCache.Count >= 256) return null;
+            IntPtr icon = IntPtr.Zero;
+            try
+            {
+                if (IsLocalExecutable(path) && Native.ExtractIconEx(path, 0, IntPtr.Zero, out icon, 1) == 1 && icon != IntPtr.Zero)
+                    using (var borrowed = Icon.FromHandle(icon)) img = borrowed.ToBitmap();
+            }
+            catch { img = null; }
+            finally { if (icon != IntPtr.Zero) Native.DestroyIcon(icon); }
             IconCache[path] = img;
             return img;
         }

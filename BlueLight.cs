@@ -87,7 +87,20 @@ namespace TrayMixer
                         ushort[] saved;
                         if (!original.TryGetValue(name, out saved)) saved = LoadOriginal(name);
                         if (saved != null) {
+                            ushort[] last;
+                            if (applied.TryGetValue(name, out last))
+                            {
+                                var current = new ushort[768];
+                                if (!Native.GetDeviceGammaRamp(dc, current)) { restored = false; return; }
+                                if (!Same(current, last))
+                                {
+                                    using (var k = Registry.CurrentUser.CreateSubKey(CfgKey)) k.DeleteValue(GammaName(name), false);
+                                    original.Remove(name);
+                                    return;
+                                }
+                            }
                             if (!Native.SetDeviceGammaRamp(dc, saved)) { restored = false; return; }
+                            original.Remove(name);
                             using (var k = Registry.CurrentUser.CreateSubKey(CfgKey)) k.DeleteValue(GammaName(name), false);
                         }
                     }) && restored;
@@ -139,7 +152,7 @@ namespace TrayMixer
                 if (stopped) return;
                 touched = true;
                 double r, g, b; Target(out r, out g, out b);
-                bool identity = r >= 1 && g >= 1 && b >= 1;
+                if (r >= 1 && g >= 1 && b >= 1) { RestoreNormal(); return; }
                 // The dirty flag is set below, after saving the original ramp.
                 // Keep recovery information until a successful restore.
                 ForEachScreen((dc, name) =>
@@ -154,10 +167,8 @@ namespace TrayMixer
                         }
                         original[name] = baseline;
                     }
-                    if (!identity) {
-                        RememberOriginal(name, baseline);
-                        if (!dirtyFlag) SetDirty(true);
-                    }
+                    RememberOriginal(name, baseline);
+                    if (!dirtyFlag) SetDirty(true);
                     ushort[] last;
                     if (check && applied.TryGetValue(name, out last))
                     {

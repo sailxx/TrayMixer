@@ -10,7 +10,7 @@ Turn down a game while keeping your call audible, switch between speakers and he
 
 **No telemetry or account.** Open source under Apache 2.0.
 
-<img src="https://img.shields.io/badge/Windows-v3.0.1-2E9BFF" alt="Windows release v3.0.1">
+<img src="https://img.shields.io/badge/Windows-v3.0.2-2E9BFF" alt="Windows release v3.0.2">
 <img src="https://img.shields.io/badge/Windows-11%20x64-2E9BFF" alt="Windows 11 x64">
 <img src="https://img.shields.io/badge/Linux-v3.1.1%20preview-2E9BFF" alt="Linux preview v3.1.1">
 <img src="https://img.shields.io/badge/Linux-AppImage%20%7C%20deb%20%7C%20rpm-2E9BFF" alt="Linux AppImage, DEB and RPM">
@@ -22,7 +22,7 @@ Turn down a game while keeping your call audible, switch between speakers and he
 
 <img src="assets/readme/hero-en.svg" width="100%" alt="TrayMixer banner with the Windows flyout, output and app volume, display controls and local preferences">
 
-<a href="https://github.com/sailxx/TrayMixer/releases/download/v3.0.1/TrayMixer-Setup.exe"><img src="assets/readme/btn-windows-en.svg" height="52" alt="Download the Windows installer"></a>&nbsp;&nbsp;<a href="https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.1"><img src="assets/readme/btn-linux-en.svg" height="52" alt="Download Linux packages"></a>&nbsp;&nbsp;<a href="https://github.com/sailxx/TrayMixer/releases/download/v3.0.1/TrayMixer.exe"><img src="assets/readme/btn-portable-en.svg" height="52" alt="Download the portable Windows executable"></a>&nbsp;&nbsp;<a href="https://github.com/sailxx/TrayMixer/releases"><img src="assets/readme/btn-new-en.svg" height="52" alt="Read the release notes"></a>
+<a href="https://github.com/sailxx/TrayMixer/releases/download/v3.0.2/TrayMixer-Setup.exe"><img src="assets/readme/btn-windows-en.svg" height="52" alt="Download the Windows installer"></a>&nbsp;&nbsp;<a href="https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.1"><img src="assets/readme/btn-linux-en.svg" height="52" alt="Download Linux packages"></a>&nbsp;&nbsp;<a href="https://github.com/sailxx/TrayMixer/releases/download/v3.0.2/TrayMixer.exe"><img src="assets/readme/btn-portable-en.svg" height="52" alt="Download the portable Windows executable"></a>&nbsp;&nbsp;<a href="https://github.com/sailxx/TrayMixer/releases"><img src="assets/readme/btn-new-en.svg" height="52" alt="Read the release notes"></a>
 
 </div>
 
@@ -61,7 +61,7 @@ Windows uses a rounded flyout. Linux follows GNOME light, dark and accent colors
 
 <br>
 
-<img src="assets/readme/numbers-en.svg" width="100%" alt="197 KB standalone Windows executable in v3.0.1, zero accounts or telemetry, two desktop platforms, three Linux package formats and five Linux appearance options">
+<img src="assets/readme/numbers-en.svg" width="100%" alt="219 KB standalone Windows executable in v3.0.2, zero accounts or telemetry, two desktop platforms, three Linux package formats and five Linux appearance options">
 
 <br>
 
@@ -70,15 +70,15 @@ Windows uses a rounded flyout. Linux follows GNOME light, dark and accent colors
 <details>
 <summary><b>Install</b></summary>
 
-### Windows 11 · x64 · v3.0.1
+### Windows 11 · x64 · v3.0.2
 
-1. Download [**TrayMixer-Setup.exe**](https://github.com/sailxx/TrayMixer/releases/download/v3.0.1/TrayMixer-Setup.exe) for an offline installer or [**TrayMixer.exe**](https://github.com/sailxx/TrayMixer/releases/download/v3.0.1/TrayMixer.exe) to run the app directly.
+1. Download [**TrayMixer-Setup.exe**](https://github.com/sailxx/TrayMixer/releases/download/v3.0.2/TrayMixer-Setup.exe) for an offline installer or [**TrayMixer.exe**](https://github.com/sailxx/TrayMixer/releases/download/v3.0.2/TrayMixer.exe) to run the app directly.
 2. In Setup, choose English or Russian, the install folder and whether to start TrayMixer at sign-in. The app interface is in English. Setup creates desktop and Start menu shortcuts.
 3. Click the TrayMixer icon in the notification area to open the mixer.
 
 Run Setup again to update or reinstall while keeping preferences and the autostart choice. Remove the app through Windows **Installed apps**.
 
-The releases are unsigned, so Windows may show a SmartScreen warning. Compare the file’s SHA-256 with the [Windows release notes](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.1).
+The releases are unsigned, so Windows may show a SmartScreen warning. Compare the file’s SHA-256 with the [Windows release notes](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.2).
 
 For an unattended install without launching the app, run `TrayMixer-Setup.exe /S /NOLAUNCH` from the installer folder. Optional switches include `/DIR="C:\path\TrayMixer"`, `/NOAUTOSTART` and `/LAUNCH`. For unattended removal, run `Uninstall.exe /uninstall /S` from the installation folder, which defaults to `%LOCALAPPDATA%\TrayMixer`.
 
@@ -138,7 +138,7 @@ npm ci
 node build.mjs --showcase
 ```
 
-To verify a download, use `Get-FileHash .\TrayMixer-Setup.exe -Algorithm SHA256` in PowerShell and compare with the [Windows release notes](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.1), or use `sha256sum <filename>` on Linux and compare with [SHA256SUMS](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/SHA256SUMS).
+To verify a download, use `Get-FileHash .\TrayMixer-Setup.exe -Algorithm SHA256` in PowerShell and compare with the [Windows release notes](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.2), or use `sha256sum <filename>` on Linux and compare with [SHA256SUMS](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/SHA256SUMS).
 
 TrayMixer stores preferences locally. Linux sends audio commands to your configured PulseAudio or PipeWire-Pulse server. See the [privacy policy](PRIVACY.md) and [security policy](SECURITY.md). For a reproducible bug, include the version, OS, desktop and affected hardware in a [GitHub issue](https://github.com/sailxx/TrayMixer/issues).
 

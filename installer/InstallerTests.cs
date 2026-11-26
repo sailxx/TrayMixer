@@ -57,6 +57,8 @@ internal static class InstallerTests
             File.Copy(stub, exe, true);
             Program.Install(app, true, false);
             Check(Program.DefaultAutostart(app), "same-version reinstall and enable autostart");
+            using (var startup = Registry.CurrentUser.OpenSubKey(Program.RunKey))
+                Check((string)startup.GetValue(Program.AppName) == "\"" + exe + "\" --startup", "installer registers the background startup command");
             File.Copy(Path.Combine(Path.GetDirectoryName(stub), "NewerStub.exe"), exe, true);
             bool downgradeRefused = false;
             try { Program.Install(app, true, false); }

@@ -27,7 +27,7 @@ export function showcase(kit, screenshot) {
       ['Display controls', 'Brightness and warmth on Windows'],
       ['Local preferences', 'No account or telemetry'],
     ];
-    let body = group(0, chip(40, 39, 'Windows v3.0.1').s)
+    let body = group(0, chip(40, 39, 'Windows v3.0.2').s)
       + group(2, lines(40, 146, title.map(one), { size: 44, weight: 800, lh: 50, spacing: '-1' }))
       + group(3, lines(40, 236, blurb.map(one), { size: 16, lh: 24, fill: P.muted }));
     cards.forEach(([title, detail], i) => {
@@ -121,7 +121,7 @@ ${card(512, 54, 336, 300, 24)}
   function numbers() {
     const head = sectionHead('By the numbers', 'TrayMixer *at a glance*');
     const items = [
-      ['197', ' KB', ['Standalone Windows', 'executable']],
+      ['219', ' KB', ['Standalone Windows', 'executable']],
       ['0', '', ['Accounts or', 'telemetry']],
       ['2', '', ['Desktop platforms']],
       ['3', '', ['Linux package', 'formats']],
@@ -136,7 +136,7 @@ ${card(512, 54, 336, 300, 24)}
         + `<text class="m" x="${x + 20}" y="${y + 56}" font-size="38" font-weight="700" letter-spacing="-1" fill="url(#tg)">${T(number)}<tspan font-size="16" fill="${P.muted}">${T(unit)}</tspan></text>`
         + lines(x + 20, y + 86, copy.map(one), { size: 13, lh: 18, fill: P.muted }));
     });
-    return svg(880, head.y + 158, '197 KB Windows executable, zero accounts or telemetry, two platforms, three Linux package formats and five appearance options', body);
+    return svg(880, head.y + 158, '219 KB Windows executable, zero accounts or telemetry, two platforms, three Linux package formats and five appearance options', body);
   }
 
   function roadmap() {
