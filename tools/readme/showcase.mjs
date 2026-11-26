@@ -37,17 +37,16 @@ export function showcase(kit, screenshot) {
         + text(x + 34, y + 32, title, { maxWidth: 170, size: 16, weight: 700 })
         + text(x + 20, y + 54, detail, { maxWidth: 178, size: 13, fill: P.muted }));
     });
-    const tray = keycap(0, 352, 'Tray click');
+    const tray = keycap(0, 380, 'Tray click');
     const panel = `<ellipse cx="680" cy="230" rx="190" ry="200" fill="url(#g1)"/>
-<rect x="500" y="72" width="360" height="2" rx="1" fill="#2a2a2a"/>
-<g clip-path="url(#screen)">
-<svg x="512" y="74" width="336" height="236" viewBox="120 57 640 450" preserveAspectRatio="xMidYMid slice" overflow="hidden">
-<image width="880" height="565" href="data:image/png;base64,${screenshot}"/>
+${card(512, 54, 336, 300, 24)}
+<g clip-path="url(#flyout)">
+<svg x="548" y="74" width="264" height="260" viewBox="215 60 451 445" overflow="hidden">
+<image width="880" height="564" href="data:image/png;base64,${screenshot}"/>
 </svg>
 </g>
-<rect x="512.5" y="74.5" width="335" height="235" rx="24" fill="none" stroke="#2a2a2a"/>
 <g transform="translate(${680 - tray.w / 2} 0)">${tray.svg}</g>`;
-    const clip = '<clipPath id="screen"><rect x="512" y="74" width="336" height="236" rx="24"/></clipPath>';
+    const clip = '<clipPath id="flyout"><rect x="548" y="74" width="264" height="260" rx="8"/></clipPath>';
     return svg(880, 480, 'TrayMixer for Windows and Linux, with a Windows mixer screenshot and four highlights', body + group(3, panel), clip);
   }
 
