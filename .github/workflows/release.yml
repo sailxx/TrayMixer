@@ -64,7 +64,7 @@ jobs:
           @(
             '## Windows 11 x64'
             ''
-            '- The mixer shows the battery percentage reported by compatible Bluetooth headsets.'
+            '- The taskbar shows battery percentages for connected Bluetooth devices that report a charge to Windows. Hide the indicator from the tray menu under Settings → Show battery on the taskbar.'
             '- The mini-player shows the current track and offers previous, play or pause, and next. Teams sessions are excluded.'
             '- Ctrl+Alt+M opens the mixer. Change or disable the shortcut under Settings in the tray menu.'
             '- Switch between English and Russian and rename volume or brightness sliders from the same menu.'

@@ -21,8 +21,8 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyTitle("TrayMixer")]
 [assembly: System.Reflection.AssemblyProduct("TrayMixer")]
 [assembly: System.Reflection.AssemblyDescription("Lightweight Windows 11 tray volume mixer")]
-[assembly: System.Reflection.AssemblyVersion("3.0.2.0")]
-[assembly: System.Reflection.AssemblyFileVersion("3.0.2.0")]
+[assembly: System.Reflection.AssemblyVersion("3.1.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("3.1.0.0")]
 
 namespace TrayMixer
 {
@@ -263,6 +263,9 @@ namespace TrayMixer
 
         public static bool SaveLanguage(string language) { return Write(ConfigKey, "Language", language); }
 
+        public static bool ShowBatteryIndicator { get { return Theme.RegInt(ConfigKey, "ShowBatteryIndicator", 1) != 0; } }
+        public static bool SaveBatteryIndicator(bool show) { return Write(ConfigKey, "ShowBatteryIndicator", show ? 1 : 0, RegistryValueKind.DWord); }
+
         public static Keys OpenShortcut
         {
             get
@@ -319,7 +322,7 @@ namespace TrayMixer
             return true;
         }
 
-        static bool Write(string path, string name, string value)
+        static bool Write(string path, string name, object value, RegistryValueKind kind = RegistryValueKind.String)
         {
             try
             {
@@ -327,7 +330,7 @@ namespace TrayMixer
                 {
                     if (key == null) return false;
                     if (value == null) key.DeleteValue(name, false);
-                    else key.SetValue(name, value, RegistryValueKind.String);
+                    else key.SetValue(name, value, kind);
                 }
                 return true;
             }
@@ -1286,6 +1289,7 @@ namespace TrayMixer
         static readonly int TaskbarCreated = RegisterWindowMessage("TaskbarCreated");
         readonly System.Windows.Forms.Timer retry = new System.Windows.Forms.Timer { Interval = 1000 };
         readonly Action<MouseButtons> click;
+        readonly Guid guid;
         Icon icon;
         string text;
         bool added, doubleClick;
@@ -1299,9 +1303,10 @@ namespace TrayMixer
         [DllImport("user32.dll")]
         static extern bool UnregisterHotKey(IntPtr window, int id);
 
-        public TrayIcon(Action<MouseButtons> click)
+        public TrayIcon(Action<MouseButtons> click, Guid guid = default(Guid))
         {
             this.click = click;
+            this.guid = guid;
             CreateHandle(new CreateParams());
             retry.Tick += delegate { Publish(); };
         }
@@ -1313,7 +1318,7 @@ namespace TrayMixer
                 if (icon != null) icon.Dispose();
                 icon = replacement;
             }
-            text = tooltip;
+            text = tooltip.Length < 128 ? tooltip : tooltip.Substring(0, char.IsHighSurrogate(tooltip[126]) ? 126 : 127);
             Publish();
         }
 
@@ -1356,7 +1361,7 @@ namespace TrayMixer
             {
                 Publish();
             }
-            else if (m.Msg == CallbackMessage && m.WParam == (IntPtr)1)
+            else if (click != null && m.Msg == CallbackMessage && m.WParam == (IntPtr)1)
             {
                 switch (m.LParam.ToInt64())
                 {
@@ -1399,7 +1404,8 @@ namespace TrayMixer
             return new NotifyIconData
             {
                 Size = Marshal.SizeOf(typeof(NotifyIconData)), Window = Handle, Id = 1,
-                Flags = 0x07, Callback = CallbackMessage, Icon = icon.Handle, Tip = text
+                Flags = 0x06 | (click == null ? 0 : 0x01) | (guid == Guid.Empty ? 0 : 0x20),
+                Callback = CallbackMessage, Icon = icon.Handle, Tip = text, Guid = guid
             };
         }
 
@@ -1834,6 +1840,7 @@ namespace TrayMixer
         public const string StartupArgument = "--startup";
         const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run", AppName = "TrayMixer", CfgKey = @"Software\TrayMixer";
         readonly TrayIcon icon;
+        readonly BatteryTray batteryTray;
         readonly Popup popup;
         readonly TrayFlyout flyout;
         readonly ContextMenu trayMenu = new ContextMenu();
@@ -1866,6 +1873,7 @@ namespace TrayMixer
                 DevicesChanged = () => { Rebind(); if (popup.Visible) popup.RefreshContent(true); }
             };
             UpdateTray();
+            batteryTray = new BatteryTray(MixerPreferences.ShowBatteryIndicator);
             audioRetry.Tick += delegate { ConnectAudio(); };
             popup.BeginInvoke((Action)(() => {
                 ConnectAudio();
@@ -1890,6 +1898,7 @@ namespace TrayMixer
 
         public void Dispose()
         {
+            batteryTray.Dispose();
             audioRetry.Dispose();
             BlueLight.Reset();
             if (defVol != null) try { defVol.UnregisterControlChangeNotify(notifier); } catch { }
@@ -1924,6 +1933,7 @@ namespace TrayMixer
                 new MenuItem(Loc.Text("Фон: Mica", "Background: Mica"), delegate { SetBackdrop(Popup.Mica); }) { RadioCheck = true, Checked = popup.Backdrop == Popup.Mica },
                 new MenuItem(Loc.Text("Фон: Acrylic", "Background: Acrylic"), delegate { SetBackdrop(Popup.Acrylic); }) { RadioCheck = true, Checked = popup.Backdrop == Popup.Acrylic },
                 new MenuItem("-"),
+                new MenuItem(Loc.Text("Показывать заряд на панели задач", "Show battery on the taskbar"), delegate { ToggleBatteryIndicator(); }) { Checked = batteryTray.Enabled },
                 new MenuItem(Loc.Text("Запускать вместе с Windows", "Run at Windows startup"), delegate { ToggleAutostart(); }) { Checked = IsAutostart() }
             });
             trayMenu.MenuItems.AddRange(new[]
@@ -1933,6 +1943,14 @@ namespace TrayMixer
                 new MenuItem("-"), hidden, settings, new MenuItem("-"),
                 new MenuItem(Loc.Text("Выход", "Exit"), delegate { Application.Exit(); })
             });
+        }
+
+        void ToggleBatteryIndicator()
+        {
+            bool show = !batteryTray.Enabled;
+            if (MixerPreferences.SaveBatteryIndicator(show)) batteryTray.SetEnabled(show);
+            else MessageBox.Show(Loc.Text("Не удалось сохранить настройку индикатора.", "Could not save the battery indicator setting."),
+                AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
         void SetLanguage(bool english)
