@@ -1,101 +1,156 @@
+[English](README.md) · [العربية](README.ar.md) · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [Čeština](README.cs.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Ελληνικά](README.el.md) · [Bahasa Indonesia](README.id.md) · [Gaeilge](README.ga.md) · [Italiano](README.it.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Polski](README.pl.md) · [Română](README.ro.md) · **Русский** · [Español](README.es.md) · [Українська](README.uk.md) · [اردو](README.ur.md) · [ئۇيغۇرچە](README.ug.md) · [Tiếng Việt](README.vi.md) · [Português](README.pt.md) · [Türkçe](README.tr.md)
+
 <div align="center">
 
-**Русский** · [English](README.md) · [Español](README.es.md) · [Português](README.pt.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Italiano](README.it.md) · [Türkçe](README.tr.md) · [Українська](README.uk.md) · [Polski](README.pl.md)
-
-<br>
-
-<img src="assets/readme/logo-white.svg" width="112" height="112" alt="Логотип TrayMixer — три синих ползунка на белом фоне">
+<img src="assets/readme/logo-blue.svg" width="128" alt="TrayMixer">
 
 # TrayMixer
 
-**Звук в одном клике.** Микшер в системном трее для Windows 11 и Linux.
+**Управляйте громкостью каждого вывода и приложения с одной небольшой панели на панели задач Windows 11 или Linux.**
 
-[![Скачать для Windows 11](assets/readme/cta-ru.svg)](https://github.com/sailxx/TrayMixer/releases/download/v3.0.2/TrayMixer-Setup.exe) · [Сборки для Linux](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.1) · [Все релизы](https://github.com/sailxx/TrayMixer/releases)
+Выключите игру, сохраняя при этом звук вашего вызова, переключайтесь между динамиками и наушниками или отрегулируйте яркость, фильтрацию синего света и затемнение на Windows.
+
+**Никакой телеметрии и аккаунта.** Открытый исходный код под Apache 2.0.
+
+<img src="https://img.shields.io/badge/Windows-v3.0.2-2E9BFF" alt="Выпуск Windows v3.0.2">
+<img src="https://img.shields.io/badge/Windows-11%20x64-2E9BFF" alt="Windows 11 x64">
+<img src="https://img.shields.io/badge/Linux-v3.1.1%20preview-2E9BFF" alt="Linux предварительный просмотр v3.1.1">
+<img src="https://img.shields.io/badge/Linux-AppImage%20%7C%20deb%20%7C%20rpm-2E9BFF" alt="Linux AppImage , DEB и RPM">
+<img src="https://img.shields.io/badge/code-C%23-2E9BFF" alt="До-диез">
+<img src="https://img.shields.io/badge/Linux%20UI-Avalonia-2E9BFF" alt="Avalonia для Linux">
+<img src="https://img.shields.io/badge/license-Apache%202.0-2E9BFF" alt="Apache 2.0">
+<img src="https://img.shields.io/github/stars/sailxx/TrayMixer?style=flat&amp;logo=github&amp;color=%232E9BFF" alt="GitHub звезды">
+<br>
+
+<img src="assets/readme/hero-en.svg" width="100%" alt="Баннер TrayMixer с всплывающим меню Windows, громкостью вывода и приложения, элементами управления отображением и локальными настройками.">
+
+<a href="https://github.com/sailxx/TrayMixer/releases/download/v3.0.2/TrayMixer-Setup.exe"><img src="assets/readme/btn-windows-en.svg" height="52" alt="Загрузите установщик Windows"></a>&nbsp; &nbsp;<a href="https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.1"><img src="assets/readme/btn-linux-en.svg" height="52" alt="Скачать пакеты Linux"></a>&nbsp; &nbsp;<a href="https://github.com/sailxx/TrayMixer/releases/download/v3.0.2/TrayMixer.exe"><img src="assets/readme/btn-portable-en.svg" height="52" alt="Загрузите портативный исполняемый файл Windows."></a>&nbsp; &nbsp;<a href="https://github.com/sailxx/TrayMixer/releases"><img src="assets/readme/btn-new-en.svg" height="52" alt="Прочтите примечания к выпуску"></a>
 
 </div>
 
 <br>
 
-<img src="assets/readme/screenshot-ru.png" width="100%" alt="Окно TrayMixer: наушники, колонки, браузер и системные звуки на одном экране">
-
-Стандартный микшер Windows 11 спрятан в «Параметрах», а значок громкости в трее меняет только одно устройство. **TrayMixer** — один клик по значку, и перед вами все наушники, колонки, мониторы и каждое приложение со своим ползунком. В Windows здесь же можно настроить яркость, тёплый оттенок и затемнение. В Linux пока доступна предварительная версия с управлением звуком.
-
-<br>
-
-<img src="assets/readme/features-ru.svg" width="100%" alt="Возможности: все устройства, каждое приложение, родной Windows 11, скрытие лишнего, лёгкость, безопасность">
+<img src="assets/readme/features-en.svg" width="100%" alt="Особенности: отдельный вывод и громкость приложений, элементы управления дисплеем Windows, элементы управления лотком, темы и локальные настройки.">
 
 <details>
-<summary><b>Управление</b></summary>
+<summary><b>Подробнее о функциях</b></summary>
 
-| Действие | Результат |
-|---|---|
-| **Левый клик** по значку в трее | Открыть или закрыть окно |
-| **Средний клик** по значку | Выключить или включить звук основного устройства |
-| **Правый клик** по значку | Параметры звука, микшер Windows, скрытые строки, фон Mica/Acrylic, автозапуск, выход |
-| Клик по **иконке строки** | Выключить или включить звук, фильтр синего света или затемнение |
-| Клик по **названию устройства** | Сделать его основным |
-| **Правый клик** по строке | Скрыть её |
-| **Колёсико мыши** над строкой | Громкость, яркость, сила фильтра или затемнение ±2 |
-| **Esc** или клик мимо окна | Закрыть |
+### Результаты и объем приложения
+
+Каждый выход имеет собственный ползунок и регулятор отключения звука. Щелкните имя выхода, чтобы выбрать его по умолчанию. На Linux это относится к новому воспроизведению, и каждый поток приложения отображается отдельно.
+
+### Элементы управления дисплеем Windows
+
+Отрегулируйте яркость на поддерживаемых мониторах, обогрейте дисплей с помощью фильтра синего света и используйте программное затемнение с того же микшера. [См. скриншот Windows в полном размере.](assets/readme/screenshot.png).
+
+### Элементы управления лотком
+
+Щелкните левой кнопкой мыши значок Windows на панели задач, чтобы отобразить или скрыть микшер, и щелкните его средней кнопкой мыши, чтобы отключить звук на выходе по умолчанию. Прокрутите строку, чтобы отрегулировать ее на две точки, щелкните значок строки аудио, чтобы отключить звук, или щелкните строку правой кнопкой мыши, чтобы скрыть ее. Восстановить скрытые строки из меню в трее. Нажимать <kbd>Esc</kbd> или щелкните снаружи, чтобы закрыть всплывающее меню Windows. Щелчки в лотке Linux зависят от вашего рабочего стола.
+
+### Внешний вид, запуск и предпочтения
+
+Windows использует закругленное всплывающее меню. Linux следует за GNOME светлыми, темными и акцентными цветами или предлагает варианты Charcoal, Nord, Catppuccin и Light. Вы можете включить запуск при входе в систему из меню в трее. Настройки хранятся локально.
 
 </details>
 
 <br>
 
-<img src="assets/readme/numbers-ru.svg" width="100%" alt="~2 МБ памяти, 0% CPU, 165 КБ, 0 зависимостей">
+<img src="assets/readme/keys-en.svg" width="100%" alt="Элементы управления Windows: щелкните значок на панели задач, чтобы открыть или закрыть, щелкните средней кнопкой мыши, чтобы отключить звук, прокрутите для настройки, щелкните имя вывода, чтобы выбрать его, щелкните правой кнопкой мыши строку, чтобы скрыть ее, и нажмите Escape, чтобы закрыть">
 
 <br>
 
-<img src="assets/readme/security-ru.svg" width="100%" alt="Безопасность: без прав администратора, без сети, защита от подмены DLL, проверяемые сборки">
+<img src="assets/readme/states-en.svg" width="100%" alt="Действия микшера: выходная громкость, громкость приложения, яркость Windows, фильтрация синего света, программное затемнение и отключение звука.">
+
+<br>
+
+<img src="assets/readme/numbers-en.svg" width="100%" alt="219 KB Автономный Windows, исполняемый файл в v3.0.2, отсутствие учетных записей и телеметрии, две настольные платформы, три формата пакета Linux и пять вариантов внешнего вида Linux.">
+
+<br>
+
+<img src="assets/readme/roadmap-en.svg" width="100%" alt="Дорожная карта: четыре опубликованных выпуска, предстоящие тесты GNOME, Fedora и Debian, а также интегрированные элементы управления отображением Linux как известный пробел.">
 
 <details>
-<summary><b>Как проверить, что exe собран из этого кода</b></summary>
+<summary><b>Установить</b></summary>
 
-Каждый релиз собирает GitHub Actions прямо из исходников, а GitHub подписывает происхождение файла (build provenance). Проверить можно так:
+### Windows 11 · x64 · v3.0.2
 
-```bash
-gh attestation verify TrayMixer-Setup.exe --repo sailxx/TrayMixer
-```
+1. Скачать [**TrayMixer-Setup.exe**](https://github.com/sailxx/TrayMixer/releases/download/v3.0.2/TrayMixer-Setup.exe) для автономного установщика или [**TrayMixer.exe**](https://github.com/sailxx/TrayMixer/releases/download/v3.0.2/TrayMixer.exe) чтобы запустить приложение напрямую.
+2. В Настройках выберите английский или русский, папку установки и запускать ли TrayMixer при входе в систему. Интерфейс приложения на английском языке. Программа установки создает ярлыки на рабочем столе и в меню «Пуск».
+3. Нажмите значок TrayMixer в области уведомлений, чтобы открыть микшер.
 
-Контрольная сумма SHA-256 установщика указана в описании каждого релиза:
+Запустите программу установки еще раз, чтобы обновить или переустановить, сохранив настройки и выбор автозапуска. Удалить приложение через Windows **Установленные приложения**.
 
-```powershell
-Get-FileHash .\TrayMixer-Setup.exe -Algorithm SHA256
-```
+Релизы не подписаны, поэтому Windows может отображать предупреждение SmartScreen. Сравните SHA -256 файла с [Примечания к выпуску Windows](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.2).
+
+Для автоматической установки без запуска приложения запустите `TrayMixer-Setup.exe /S /NOLAUNCH` из папки установщика. Дополнительные переключатели включают в себя `/DIR="C:\path\TrayMixer"`, `/NOAUTOSTART` и `/LAUNCH`. Для автоматического удаления запустите `Uninstall.exe /uninstall /S` из папки установки, которая по умолчанию `%LOCALAPPDATA%\TrayMixer`.
+
+### Linux · x86_64 · v3.1.1 предварительный просмотр
+
+| Упаковка | Установить или запустить из папки загрузки |
+| --- | --- |
+| [DEB](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/TrayMixer_3.1.1_amd64.deb) | `sudo apt install ./TrayMixer_3.1.1_amd64.deb` |
+| [RPM](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/TrayMixer-3.1.1-1.x86_64.rpm) | `sudo dnf install ./TrayMixer-3.1.1-1.x86_64.rpm` |
+| [AppImage](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/TrayMixer-3.1.1-x86_64.AppImage) | `chmod +x TrayMixer-3.1.1-x86_64.AppImage`, затем `./TrayMixer-3.1.1-x86_64.AppImage` |
+
+Предварительная версия использует X11 или XWayland и требует glibc 2.35+, PulseAudio 15+ или PipeWire-Pulse, и `pactl`. GNOME требует поддержки AppIndicator для значка на панели задач. AppImage нуждается в системных библиотеках рабочего стола и принимает `--appimage-extract-and-run` если FUSE недоступен.
+
+См. [Руководство Linux](linux/README.md) для требований к рабочему столу и поведения лотка. Сравните хэши пакетов с [SHA256SUMS](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/SHA256SUMS).
 
 </details>
 
-## Установка
+<a id="platforms"></a>
 
-1. Скачайте [`TrayMixer-Setup.exe`](https://github.com/sailxx/TrayMixer/releases/download/v3.0.2/TrayMixer-Setup.exe) и запустите.
-2. Выберите папку (по умолчанию `%LOCALAPPDATA%\TrayMixer`), автозапуск и запуск после установки. Ярлыки на рабочем столе и в меню «Пуск» создаются автоматически. Интернет для установки не нужен.
-3. Для обновления запустите Setup нового релиза; для переустановки — той же версии. Настройки сохраняются, установка более старой версии блокируется. Удаление доступно в списке установленных приложений Windows; настройки сохраняются.
+<details>
+<summary><b>Платформы и известные ограничения</b></summary>
 
-Контрольная сумма Windows-установщика указана в релизе. Для Linux есть пакеты DEB, RPM и AppImage. [Скачать предварительную версию для Linux](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.1).
+| | Windows 11 | Linux предварительный просмотр |
+| --- | --- | --- |
+| Аудио | Том устройства и сгруппированных приложений | Устройства и отдельные потоки приложений через PulseAudio или PipeWire-Pulse |
+| Поднос | Область уведомлений Windows | Зависит от хоста лотка рабочего стола |
+| Отображать | Яркость, фильтрация синего света и затемнение | Открывает экран рабочего стола и настройки ночного освещения. |
+| Предпочтения | `HKCU\Software\TrayMixer` | `$XDG_CONFIG_HOME/traymixer/settings.json` |
 
-## Подпись и проверка
+Поддержка монитора и драйверов влияет на яркость Windows. Упаковка и запуск Linux проверены на Ubuntu 24.04. Установки Fedora и Debian, поведение лотка GNOME и совместимость оборудования по-прежнему требуют тестирования на рабочем столе.
 
-Установщик и встроенное приложение не имеют цифровой подписи. Windows SmartScreen может показать предупреждение; перед запуском проверьте источник релиза и контрольную сумму.
+</details>
 
-GitHub Actions собирает релизы из исходников и публикует подтверждение происхождения сборки (`gh attestation verify TrayMixer-Setup.exe --repo sailxx/TrayMixer`). SHA-256 указан в описании релиза.
+<details>
+<summary><b>Разработка</b></summary>
+
+TrayMixer поддерживается [Влад ( sailxx )](https://github.com/sailxx) под [Лицензия Apache 2.0](LICENSE).
+
+Соберите Windows из клона со встроенным . NET Framework C# компилятор.
+
+```cmd
+build.cmd
+```
+
+Соберите Linux с помощью . NET SDK 10.0 . См. [Руководство по сборке и упаковке Linux](linux/README.md#build-and-verify).
+
+```sh
+dotnet build linux/TrayMixer.Linux.csproj -c Release
+dotnet run --project linux/tests/TrayMixer.Linux.Tests.csproj -c Release
+```
+
+Чтобы восстановить английскую иллюстрацию README, используйте шрифты Golos Text и JetBrains Mono в `tools/readme/.font` как описано в [build.mjs](tools/readme/build.mjs).
+
+```sh
+cd tools/readme
+npm ci
+node build.mjs --showcase
+```
+
+Чтобы проверить загрузку, используйте `Get-FileHash .\TrayMixer-Setup.exe -Algorithm SHA256` в PowerShell и сравните с [Примечания к выпуску Windows](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.2), или используйте `sha256sum <filename>` на Linux и сравните с [SHA256SUMS](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/SHA256SUMS).
+
+TrayMixer сохраняет настройки локально. Linux отправляет аудиокоманды на настроенный вами сервер PulseAudio или PipeWire-Pulse. См. [политика конфиденциальности](PRIVACY.md) и [политика безопасности](SECURITY.md). Для воспроизводимой ошибки включите версию OS, рабочий стол и затронутое оборудование в файл. [Проблема GitHub](https://github.com/sailxx/TrayMixer/issues).
+
+</details>
+
+---
+
+<div align="center">
 
 
-## О проекте
+В переводах могут описываться более ранние выпуски.
 
-<img src="assets/readme/about-ru.svg" width="100%" alt="О TrayMixer. Начало проекта — 6 октября 2026 года">
-
-[Влад (sailxx)](https://github.com/sailxx) начал TrayMixer **6 октября 2026 года**, чтобы до настроек звука можно было добраться одним кликом. Это бесплатный проект с открытым исходным кодом.
-
-В TrayMixer нет аккаунтов, рекламы и трекеров. Приложение читает названия устройств и программ для отображения в микшере, хранит настройки на компьютере и не отправляет статистику использования. [Политика конфиденциальности](PRIVACY.md)
-
-## Дорожная карта
-
-<img src="assets/readme/timeline-ru.svg" width="100%" alt="Дорожная карта TrayMixer от 1.0 до 3.1.1">
-
-- **1.0 · 6 октября 2026 года** — первый лёгкий микшер громкости в трее Windows 11.
-- **2.x** — к звуку добавились яркость, фильтр синего света и затемнение. Появился установщик Windows.
-- [**Windows 3.0**](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.0) — окно получило более спокойный стеклянный фон и стало плавнее менять размер.
-- [**Linux 3.1**](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.0) — первая предварительная сборка с управлением звуком из трея, поддержкой тем GNOME и пакетами DEB, RPM и AppImage.
-- [**Windows 3.0.2**](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.2) и [**Linux 3.1.1**](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.1) — текущая стабильная версия для Windows и предварительная версия для Linux.
-
-Дальше — проверка Linux-версии на разных рабочих столах и оборудовании. Настройки экрана в Linux зависят от поддержки со стороны рабочего стола.
+</div>
