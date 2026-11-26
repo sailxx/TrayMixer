@@ -1,6 +1,8 @@
 <div align="center">
 
-<img src="assets/readme/logo-blue.svg" width="112" height="112" alt="TrayMixer logo — three blue mixer sliders">
+[Русский](README.ru.md) · **English** · [Español](README.es.md) · [Português](README.pt.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Italiano](README.it.md) · [Türkçe](README.tr.md) · [Українська](README.uk.md) · [Polski](README.pl.md)
+
+<img src="assets/readme/logo-white.svg" width="112" height="112" alt="TrayMixer logo — three blue mixer sliders">
 
 # TrayMixer
 
@@ -12,19 +14,19 @@ A compact mixer in your system tray: adjust output devices and application volum
 
 Built and continuously improved by **Vlad · [sailxx](https://github.com/sailxx)**.
 
-[![Windows 11 · 3.0 stable](assets/readme/badge-windows.svg)](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.0)
-[![Linux · 3.1 preview](assets/readme/badge-linux.svg)](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.0)
+[![Windows 11 · 3.0.1 stable](assets/readme/badge-windows.svg)](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.1)
+[![Linux · 3.1.1 preview](assets/readme/badge-linux.svg)](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.1)
 [![Apache 2.0 · open source](assets/readme/badge-license.svg)](LICENSE)
 
 ![TrayMixer Windows panel with audio, brightness, blue-light and dimming controls](assets/readme/screenshot.png)
 
-[![Download for Windows 11](assets/readme/download-windows.svg)](https://github.com/sailxx/TrayMixer/releases/download/v3.0.0/TrayMixer-Setup.exe)
-[![Linux packages](assets/readme/download-linux.svg)](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.0)
+[![Download for Windows 11](assets/readme/download-windows.svg)](https://github.com/sailxx/TrayMixer/releases/download/v3.0.1/TrayMixer-Setup.exe)
+[![Linux packages](assets/readme/download-linux.svg)](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.1)
 [![Release notes](assets/readme/release-notes.svg)](https://github.com/sailxx/TrayMixer/releases)
 
 Windows 11 · English interface · Linux x86_64 preview: DEB, RPM and AppImage
 
-[Features](#features) · [Install](#install) · [Controls](#controls) · [Roadmap](#roadmap) · [Trust](#privacy--security) · [About](#the-person-behind-traymixer)
+[Features](#features) · [Install](#install) · [Controls](#controls) · [Roadmap](#roadmap) · [Trust](#privacy--security) · [About](#about-traymixer)
 
 </div>
 
@@ -56,7 +58,7 @@ Turn down a game without losing your call, switch from speakers to headphones, o
 
 ### Windows 11
 
-1. Download [**TrayMixer-Setup.exe**](https://github.com/sailxx/TrayMixer/releases/download/v3.0.0/TrayMixer-Setup.exe).
+1. Download [**TrayMixer-Setup.exe**](https://github.com/sailxx/TrayMixer/releases/download/v3.0.1/TrayMixer-Setup.exe).
 2. Select English or Russian in the installer, then choose the install folder. The default is `%LOCALAPPDATA%\TrayMixer`; the app itself stays in English.
 3. Setup installs offline and creates desktop and Start menu shortcuts. Choose whether to enable autostart and launch the app.
 
@@ -91,9 +93,9 @@ If you chose a different folder, use that folder instead.
 
 | Format | Download | Install |
 |---|---|---|
-| **DEB** · Ubuntu / Debian-compatible | [TrayMixer_3.1.0_amd64.deb](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer_3.1.0_amd64.deb) | Software installer or `apt` |
-| **RPM** · Fedora-compatible | [TrayMixer-3.1.0-1.x86_64.rpm](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer-3.1.0-1.x86_64.rpm) | Software installer or `dnf` |
-| **AppImage** · portable | [TrayMixer-3.1.0-x86_64.AppImage](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer-3.1.0-x86_64.AppImage) | Make executable and launch |
+| **DEB** · Ubuntu / Debian-compatible | [TrayMixer_3.1.1_amd64.deb](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/TrayMixer_3.1.1_amd64.deb) | Software installer or `apt` |
+| **RPM** · Fedora-compatible | [TrayMixer-3.1.1-1.x86_64.rpm](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/TrayMixer-3.1.1-1.x86_64.rpm) | Software installer or `dnf` |
+| **AppImage** · portable | [TrayMixer-3.1.1-x86_64.AppImage](https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/TrayMixer-3.1.1-x86_64.AppImage) | Make executable and launch |
 
 Requires x86_64 Linux, glibc 2.35+, X11 / XWayland, PulseAudio 15+ or PipeWire-Pulse, and `pactl`. Build and package checks use Ubuntu 24.04; distribution-specific desktop testing on Fedora and Debian is still needed.
 
@@ -105,8 +107,8 @@ Requires x86_64 Linux, glibc 2.35+, X11 / XWayland, PulseAudio 15+ or PipeWire-P
 ```sh
 mkdir -p "$HOME/Downloads/TrayMixer"
 cd "$HOME/Downloads/TrayMixer"
-curl -fLO https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer_3.1.0_amd64.deb
-sudo apt install ./TrayMixer_3.1.0_amd64.deb
+curl -fLO https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/TrayMixer_3.1.1_amd64.deb
+sudo apt install ./TrayMixer_3.1.1_amd64.deb
 traymixer
 ```
 
@@ -120,8 +122,8 @@ For conventional Fedora installations using `dnf`:
 ```sh
 mkdir -p "$HOME/Downloads/TrayMixer"
 cd "$HOME/Downloads/TrayMixer"
-curl -fLO https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer-3.1.0-1.x86_64.rpm
-sudo dnf install ./TrayMixer-3.1.0-1.x86_64.rpm
+curl -fLO https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/TrayMixer-3.1.1-1.x86_64.rpm
+sudo dnf install ./TrayMixer-3.1.1-1.x86_64.rpm
 traymixer
 ```
 
@@ -135,12 +137,12 @@ Install `pulseaudio-utils` using your distribution's package manager first. The 
 ```sh
 mkdir -p "$HOME/Applications"
 cd "$HOME/Applications"
-curl -fLO https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.0/TrayMixer-3.1.0-x86_64.AppImage
-chmod +x TrayMixer-3.1.0-x86_64.AppImage
-./TrayMixer-3.1.0-x86_64.AppImage
+curl -fLO https://github.com/sailxx/TrayMixer/releases/download/linux-v3.1.1/TrayMixer-3.1.1-x86_64.AppImage
+chmod +x TrayMixer-3.1.1-x86_64.AppImage
+./TrayMixer-3.1.1-x86_64.AppImage
 ```
 
-If FUSE is unavailable, run `./TrayMixer-3.1.0-x86_64.AppImage --appimage-extract-and-run` instead. Keep the file in its permanent location before enabling **Start at login**.
+If FUSE is unavailable, run `./TrayMixer-3.1.1-x86_64.AppImage --appimage-extract-and-run` instead. Keep the file in its permanent location before enabling **Start at login**.
 
 </details>
 
@@ -198,16 +200,16 @@ Windows and Linux have separate release streams.
 <details>
 <summary><strong>Verify a download</strong></summary>
 
-**Windows:** download from the [Windows release](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.0). In PowerShell, calculate the installer's SHA-256 and compare the entire value with the release description:
+**Windows:** download from the [Windows release](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.1). In PowerShell, calculate the installer's SHA-256 and compare the entire value with the release description:
 
 ```powershell
 cd "$HOME\Downloads"
 Get-FileHash .\TrayMixer-Setup.exe -Algorithm SHA256
 ```
 
-Do not run a file if its checksum differs. A matching checksum confirms that it matches the published file, not that the software is free of vulnerabilities. The checked-in Windows release workflow attests `TrayMixer.exe`, not the installer; do not assume an installer attestation is available. If a release provides provenance for your exact file, GitHub CLI can verify that file with `gh attestation verify <filename> --repo sailxx/TrayMixer`.
+Do not run a file if its checksum differs. A matching checksum confirms that it matches the published file, not that the software is free of vulnerabilities. For Windows 3.0.1, verify the provenance of the exact file with `gh attestation verify <filename> --repo sailxx/TrayMixer`.
 
-**Linux:** download `SHA256SUMS` from the [Linux release](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.0), then compare your package with its corresponding entry using `sha256sum <filename>`.
+**Linux:** download `SHA256SUMS` from the [Linux release](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.1), then compare your package with its corresponding entry using `sha256sum <filename>`.
 
 The Windows installer and application are unsigned; Linux packages are also unsigned. Build provenance and checksums are not code-signing certificates.
 
@@ -215,16 +217,15 @@ The Windows installer and application are unsigned; Linux packages are also unsi
 
 ## Roadmap
 
-<p align="center">
-<img src="assets/readme/roadmap-1.svg" width="320" alt="Available: Windows 3.0 stable and Linux 3.1 preview.">
-<img src="assets/readme/roadmap-2.svg" width="320" alt="Validate next: GNOME tray, themes, hardware and clean Fedora / Debian installations.">
-<img src="assets/readme/roadmap-3.svg" width="320" alt="Explore later: Linux display controls and ongoing refinements. No fixed dates.">
-</p>
+<img src="assets/readme/timeline-en.svg" width="100%" alt="TrayMixer roadmap from 1.0 to 3.1.1">
 
-- **Available:** Windows 3.0 stable, the native tray mixer and Windows display tools; Linux 3.1 preview with audio controls, themes and three package formats.
-- **Validation priorities:** real GNOME tray and theme behavior, installation on clean Fedora / Debian systems, and feedback from different audio devices and displays.
-- **Future exploration:** integrated Linux brightness, blue-light filtering and dimming, where desktop and compositor APIs allow it. These are not available in the current Linux preview.
-- **Ongoing:** refine usability, investigate reported bugs and improve documentation. Priorities may change with testing and feedback; there are no fixed delivery dates.
+- **1.0 · October 6, 2026** — TrayMixer started as a lightweight Windows 11 volume mixer that opened from the system tray.
+- **2.x** — Display brightness joined the audio controls. Blue-light filtering, dimming and a Windows installer followed.
+- [**Windows 3.0**](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.0) — The flyout gained a subtler glass backdrop and smoother resizing.
+- [**Linux 3.1**](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.0) — The first Linux preview brought tray audio controls, GNOME-aware themes and DEB, RPM and AppImage packages.
+- [**Windows 3.0.1**](https://github.com/sailxx/TrayMixer/releases/tag/v3.0.1) and [**Linux 3.1.1**](https://github.com/sailxx/TrayMixer/releases/tag/linux-v3.1.1) — The current stable Windows release and Linux preview.
+
+Next up is testing the Linux preview on more desktops and hardware. Integrated Linux display controls are an idea to explore as desktop support allows.
 
 ## Privacy & security
 
@@ -259,11 +260,13 @@ Windows brightness depends on monitor and driver support; blue-light and dimming
 
 For a useful bug report, include the app version, OS / desktop version, affected audio or display device, what you expected and the steps to reproduce. Redact private paths, application names and other personal information from screenshots or logs.
 
-## The person behind TrayMixer
+## About TrayMixer
 
-TrayMixer is developed by **Vlad ([sailxx](https://github.com/sailxx))**, an independent developer building digital products for people. It is an ongoing project, not a finished one-off release: Vlad continues to improve the interface, fix issues and extend platform support.
+<img src="assets/readme/about-en.svg" width="100%" alt="About TrayMixer. Started October 6, 2026">
 
-A stable Windows release is available today, while the Linux version is being developed as a separate preview. Release notes explain what has shipped; the roadmap describes direction rather than a delivery commitment. Feedback and reproducible reports help guide the next improvements.
+[Vlad (sailxx)](https://github.com/sailxx) started TrayMixer on **October 6, 2026** to put everyday sound controls one click away. It is free, open source and independently maintained.
+
+There are no accounts, ads or trackers. TrayMixer reads device and app names to fill the mixer and keeps your preferences on your computer. It does not send usage data. [Privacy policy](PRIVACY.md)
 
 [![Report an issue](assets/readme/report-issue.svg)](https://github.com/sailxx/TrayMixer/issues)
 
@@ -276,8 +279,6 @@ You can help by reporting bugs, testing the Linux preview on your desktop, impro
 ---
 
 <div align="center">
-
-[Русский](README.ru.md) · **English** · [Español](README.es.md) · [Português](README.pt.md) · [Deutsch](README.de.md) · [Français](README.fr.md) · [Italiano](README.it.md) · [Türkçe](README.tr.md) · [Українська](README.uk.md) · [Polski](README.pl.md)
 
 Translations are available separately and may not yet reflect the latest platform changes.
 

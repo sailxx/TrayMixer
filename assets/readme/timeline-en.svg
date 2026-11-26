@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="120" viewBox="0 0 880 120" role="img" aria-label="Roadmap">
+  <rect x="1" y="1" width="878" height="118" rx="18" fill="#151719" stroke="#37414a" stroke-width="2"/>
+  <path d="M38 35h56" stroke="#384550" stroke-width="3" stroke-linecap="round"/>
+  <path d="M38 35h33" stroke="#59baff" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="71" cy="35" r="4" fill="#59baff"/>
+  <text x="38" y="82" fill="#f3f6f9" font-family="Segoe UI, Arial, sans-serif" font-size="35" font-weight="700">Roadmap</text>
+  <rect x="617" y="35" width="225" height="50" rx="10" fill="#1f272e" stroke="#394754"/>
+  <text x="729.5" y="60" fill="#b4dfff" font-family="Consolas, monospace" font-size="19" text-anchor="middle" dominant-baseline="central">1.0 → 3.1.1</text>
+</svg>

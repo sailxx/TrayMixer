@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144" role="img" aria-label="TrayMixer">
+  <rect x="1" y="1" width="142" height="142" rx="31" fill="#fff" stroke="#dce5ed" stroke-width="2"/>
+  <path d="M31 43h82M31 72h82M31 101h82" stroke="#d6e3ee" stroke-width="6" stroke-linecap="round"/>
+  <path d="M31 43h51M31 72h25M31 101h65" stroke="#1677c5" stroke-width="6" stroke-linecap="round"/>
+  <g fill="#1677c5" stroke="#fff" stroke-width="3">
+    <circle cx="82" cy="43" r="9"/>
+    <circle cx="56" cy="72" r="9"/>
+    <circle cx="96" cy="101" r="9"/>
+  </g>
+</svg>

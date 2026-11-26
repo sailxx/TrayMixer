@@ -34,10 +34,13 @@ for (const [group, cards] of Object.entries(groups)) {
   cards.forEach(([title, ...lines], i) => {
     const height = group === 'roadmap' ? 320 : 198;
     let body = `<g clip-path="url(#clip)"><rect width="320" height="${height}" rx="20" fill="url(#bg)"/><circle cx="290" cy="0" r="210" fill="url(#g1)"/><rect x=".5" y=".5" width="319" height="${height - 1}" rx="20" fill="url(#cg)" fill-opacity=".65" stroke="#333"/><rect x="20" y="1" width="280" height="1" fill="url(#hl)"/></g>`;
-    if (group === 'benefit') {
-      body += `<circle cx="32" cy="32" r="15" fill="#4CC2FF"/>` + text(27, 38, String(i + 1), 17, '#021226', true);
+    if (group === 'roadmap') {
+      body += text(20, 38, ['SHIPPED', 'NEXT', 'LATER'][i], 17, '#74D3FF', true);
     } else {
-      body += text(20, 38, group === 'roadmap' ? ['SHIPPED', 'NEXT', 'LATER'][i] : 'TRUST', 17, '#74D3FF', true);
+      body = `<rect x=".5" y=".5" width="319" height="${height - 1}" rx="16" fill="#151719" stroke="#37414a"/>
+<path d="M20 34h46" stroke="#384550" stroke-width="3" stroke-linecap="round"/>
+<path d="M20 34h26" stroke="#59baff" stroke-width="3" stroke-linecap="round"/>
+<circle cx="46" cy="34" r="4" fill="#59baff"/>`;
     }
     body += text(20, 78, title, 22, '#FFFFFF');
     lines.forEach((line, j) => { body += text(20, 112 + j * 26, line); });
