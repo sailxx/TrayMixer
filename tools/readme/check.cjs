@@ -3,15 +3,14 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '../..');
 const md = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
-const refs = [...md.matchAll(/\]\(([^)]+)\)|\bsrc="([^"]+)"/g)].map(m=>m[1]||m[2]);
-const local = refs.filter(r=>!/^https?:|^#/.test(r));
+const refs = [...md.matchAll(/\]\(([^)]+)\)|\b(?:src|href)="([^"]+)"/g)].map(m=>m[1]||m[2]);
+const local = refs.filter(r => !/^(?:https?:|#)/.test(r));
 for(const ref of local) assert(fs.existsSync(path.join(root, ref.split('#')[0])), `Missing local reference: ${ref}`);
 const anchors = [...md.matchAll(/^#{1,6} (.+)$/gm)].map(m=>m[1].toLowerCase().replace(/[^\w\s-]/g,'').replace(/ /g,'-'));
 for(const ref of refs.filter(r=>r.startsWith('#'))) assert(anchors.includes(ref.slice(1)), `Missing anchor: ${ref}`);
 assert.equal((md.match(/<details>/g)||[]).length, (md.match(/<\/details>/g)||[]).length);
 assert.equal((md.match(/^```/gm)||[]).length%2, 0);
 assert(!md.includes('gh attestation verify TrayMixer-Setup.exe'), 'Unsupported installer provenance claim');
-for(const s of ['Actively in development', 'Vlad', '## Roadmap', '## Privacy & security', '## Reliability & current limits']) assert(md.includes(s), `Missing section ${s}`);
 const assets = [...new Set(local.filter(r=>r.endsWith('.svg')))];
 for(const asset of assets) {
  const s=fs.readFileSync(path.join(root,asset),'utf8');
@@ -19,16 +18,18 @@ for(const asset of assets) {
  assert(!/<script|<foreignObject|https?:\/\/(?!www.w3.org)/.test(s), `Nonportable SVG: ${asset}`);
  assert(s.includes('aria-label='), `No accessible name: ${asset}`);
 }
-const cards = [...md.matchAll(/<img src="(assets\/readme\/(?:benefit|roadmap|trust)-\d\.svg)" width="320" alt="[^"]+">/g)];
-assert.equal(cards.length, 12, 'All informational panels must use separate wrapping cards');
-assert(!/!\[[^\]]*\]\(assets\/readme\/(?:benefits|roadmap|trust)-blue\.svg\)/.test(md), 'Wide panels shrink text on phones');
-for (const [, asset] of cards) {
- const svg = fs.readFileSync(path.join(root, asset), 'utf8');
- assert(svg.includes('viewBox="0 0 320 '), 'Cards must fit narrow README columns');
- const sizes = [...svg.matchAll(/font-size="([\d.]+)"/g)].map(m => Number(m[1]));
- assert(sizes.length && Math.min(...sizes) >= 17, 'Card text must remain readable at native width');
+const artwork = [...md.matchAll(/<img src="assets\/readme\/([^"]+)"[^>]*alt="[^"]+"/g)].map(match => match[1]);
+assert.deepEqual(artwork, [
+  'logo-blue.svg', 'hero-en.svg',
+  'btn-windows-en.svg', 'btn-linux-en.svg', 'btn-portable-en.svg', 'btn-new-en.svg',
+  'features-en.svg', 'keys-en.svg', 'states-en.svg', 'numbers-en.svg', 'roadmap-en.svg',
+]);
+for (const file of artwork.filter(name => name !== 'logo-blue.svg' && !name.startsWith('btn-'))) {
+  const image = fs.readFileSync(path.join(root, 'assets/readme', file), 'utf8');
+  assert.match(image, /viewBox="0 0 880 \d+"/, file);
+  assert.match(image, /prefers-reduced-motion/, file);
 }
-console.log('PASS: 12 wrapping cards, 320px viewBox, minimum 17px text; no wide information panels');
+console.log('PASS: six full-width banners and four download buttons in README order');
 console.log(`PASS: ${local.length} local references, ${refs.filter(r=>r.startsWith('#')).length} anchors, balanced details/fences, ${assets.length} self-contained named SVGs`);
 // A local layout preview, not a substitute for GitHub's own Markdown renderer.
 const escape=s=>s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
@@ -45,7 +46,7 @@ for(const line of md.replace(/\n(?=\[!\[)/g, ' ').split('\n')) {
  if(table){body+='</table>';table=false;}
  const heading=line.match(/^(#{1,6}) (.*)$/);
  if(heading){const id=heading[2].toLowerCase().replace(/[^\w\s-]/g,'').replace(/ /g,'-');body+=`<h${heading[1].length} id="${id}">${inline(heading[2])}</h${heading[1].length}>`;}
- else if(/^<\/?(?:div|p|details|summary|img)/.test(line))body+=line;
+ else if(/^<\/?(?:div|p|details|summary|img|a|br)\b/.test(line))body+=line;
  else if(line.trim())body+='<p>'+inline(line.replace(/^> /,''))+'</p>';
 }
 const out=path.join(root,'.sharrowkin/readme-preview');fs.mkdirSync(out,{recursive:true});

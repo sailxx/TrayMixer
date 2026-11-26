@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createKit, ICONS } from './kit.mjs';
+import { showcase } from './showcase.mjs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(DIR, '../..');
@@ -14,9 +15,12 @@ const STR = JSON.parse(fs.readFileSync(path.join(DIR, 'strings.json'), 'utf8'));
 const VERSION = fs.readFileSync(path.join(REPO, 'TrayMixer.cs'), 'utf8').match(/AssemblyVersion\("(\d+\.\d+)/)[1];
 
 const B = '#4CC2FF'; // акцент Windows 11 (тёмная тема)
-const K = createKit({
+const fonts = {
   golos: path.join(DIR, '.font/golos.ttf'),
   mono: path.join(DIR, '.font/jbmono.ttf'),
+};
+const K = createKit({
+  ...fonts,
   accent: { hi: B, grad: ['#A8E1FF', '#3B8BFF'], on: '#001A2E', glow: '#2E8BFF', glow2: '#7A5CFF', btn: ['#6CCFFF', '#2C9BE8'] },
 });
 const { P, T, card, chip, sectionHead, iconBox, lines, wrap, one, fitSize, fitText, delay, svg } = K;
@@ -138,4 +142,23 @@ for (const [lang, l] of Object.entries(STR)) {
     [`security-${lang}.svg`]: security(l),
   });
 }
-await K.build(OUT, langs, 'TrayMixerv.');
+langs.en = () => ({
+  'cta-en.svg': K.button(STR.en.cta, ICONS.download, true),
+  'security-en.svg': security(STR.en),
+});
+if (!process.argv.includes('--showcase')) await K.build(OUT, langs, 'TrayMixerv.');
+
+const english = createKit({
+  ...fonts,
+  accent: {
+    hi: '#2E9BFF',
+    grad: ['#7CC4FF', '#1478F0'],
+    on: '#021226',
+    glow: '#1478F0',
+    glow2: '#5AB8FF',
+    glowOpacity: 0.22,
+    btn: ['#6CBBFF', '#1F7BF0'],
+  },
+});
+const screenshot = fs.readFileSync(path.join(OUT, 'screenshot.png')).toString('base64');
+await english.build(OUT, { en: () => showcase(english, screenshot) }, 'TrayMixerv.');
