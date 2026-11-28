@@ -1,4 +1,4 @@
-// TrayMixer — лёгкий микшер громкости в трее для Windows 11 (Mica/Acrylic, скруглённые углы).
+// TrayMixer — лёгкий микшер громкости в трее для Windows 11 (Mica, Acrylic, Frosted Glass).
 // Окно рисуется вручную в одну поверхность с альфа-каналом — без WPF и дочерних контролов.
 // Сборка: build.cmd (встроенный csc .NET Framework 4.x)
 using System;
@@ -21,8 +21,8 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyTitle("TrayMixer")]
 [assembly: System.Reflection.AssemblyProduct("TrayMixer")]
 [assembly: System.Reflection.AssemblyDescription("Lightweight Windows 11 tray volume mixer")]
-[assembly: System.Reflection.AssemblyVersion("3.1.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("3.1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("3.2.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("3.2.0.0")]
 
 namespace TrayMixer
 {
@@ -39,9 +39,9 @@ namespace TrayMixer
         static string Pick(string a, string b) { try { using (new FontFamily(a)) return a; } catch { return b; } }
         static Color C(uint argb) { return Color.FromArgb(unchecked((int)argb)); }
 
-        public static Theme Load()
+        public static Theme Load(bool useTaskbarTheme = false)
         {
-            var t = new Theme { Light = RegInt(Personalize, "AppsUseLightTheme", 0) == 1 };
+            var t = new Theme { Light = useTaskbarTheme ? TaskbarLight() : RegInt(Personalize, "AppsUseLightTheme", 0) == 1 };
             if (t.Light)
             {
                 t.Fg = C(0xE4000000); t.Sub = C(0x9E000000); t.Track = C(0x72000000); t.ThumbOuter = C(0xFFFFFFFF);
@@ -69,6 +69,7 @@ namespace TrayMixer
 
         public bool SameAs(Theme o) { return o.Light == Light && o.Accent == Accent; }
         public static bool TaskbarLight() { return RegInt(Personalize, "SystemUsesLightTheme", 0) == 1; }
+        public static bool TransparencyEnabled() { return RegInt(Personalize, "EnableTransparency", 1) != 0; }
 
         public static int RegInt(string path, string name, int def)
         {
@@ -353,13 +354,17 @@ namespace TrayMixer
     // ───────────────────────── Всплывающее окно ─────────────────────────
     class Popup : Form
     {
-        public const int Mica = 2, Acrylic = 3;
+        public const int Mica = 2, Acrylic = 3, FrostedGlass = 100;
+        const int DwmBackdropNone = 1, DwmSystemBackdropType = 38;
         const int W = 360;
-        Theme T = Theme.Load();
+        Theme T;
+        readonly FrostedWallpaper wallpaper = new FrostedWallpaper();
         readonly float s;
         readonly List<Item> items = new List<Item>();
         readonly System.Windows.Forms.Timer sync = new System.Windows.Forms.Timer { Interval = 1000 };
+        readonly System.Windows.Forms.Timer timelineFrames = new System.Windows.Forms.Timer { Interval = 33 };
         readonly ContextMenu rowMenu = new ContextMenu();
+        readonly TrayFlyout rowFlyout;
         readonly ToolTip mediaTip = new ToolTip();
         readonly WindowsMedia media = new WindowsMedia();
         readonly Stopwatch batteryAge = new Stopwatch();
@@ -368,6 +373,23 @@ namespace TrayMixer
         bool readingMedia, sendingMedia;
         int focusedMedia = -1, pressedMedia = -1;
         const int MediaPart = 4;
+        const int TimelineIndex = 3, TimelinePart = MediaPart + TimelineIndex;
+        MediaTrack seeking;
+        long seekTarget;
+        SeekRequest pendingSeek;
+        int paintedTimelinePixel = -1;
+        int popupGeneration;
+
+        sealed class SeekRequest
+        {
+            public readonly MediaTrack Source;
+            public readonly long Target;
+            public readonly Stopwatch Age = Stopwatch.StartNew();
+            public MediaTrack BeforeSend;
+            public long LastPoll;
+
+            public SeekRequest(MediaTrack source, long target) { Source = source; Target = target; }
+        }
         string signature = "";
         List<Display> displayedMonitors;
         int contentHeight, scrollOffset;
@@ -375,6 +397,7 @@ namespace TrayMixer
         IntPtr dib, memDC, oldBmp; Bitmap surface; int dibW, dibH;
         Font fText, fValue, fBattery, fGlyph, fMediaGlyph, fBadge;
         int backdrop;
+        bool frostedTransparency;
 
         readonly Stopwatch hiddenFor = new Stopwatch();
         public bool CanOpenFromTray { get { return !hiddenFor.IsRunning || hiddenFor.ElapsedMilliseconds > 300; } }
@@ -382,6 +405,19 @@ namespace TrayMixer
         public Popup(int backdrop, float scale)
         {
             this.backdrop = backdrop; s = scale;
+            T = Theme.Load(backdrop == FrostedGlass);
+            rowFlyout = new TrayFlyout(rowMenu, scale, () => Backdrop);
+            rowFlyout.Closed += (sender, args) =>
+            {
+                if (args.CloseReason == ToolStripDropDownCloseReason.AppFocusChange && ActiveForm != this) HidePopup();
+            };
+            mediaTip.OwnerDraw = true;
+            mediaTip.Draw += (sender, args) =>
+            {
+                using (var brush = new SolidBrush(FrostedWallpaper.BaseColor(T, Backdrop))) args.Graphics.FillRectangle(brush, args.Bounds);
+                using (var pen = new Pen(T.Sep)) args.Graphics.DrawRectangle(pen, 0, 0, args.Bounds.Width - 1, args.Bounds.Height - 1);
+                args.DrawText(TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            };
             FormBorderStyle = FormBorderStyle.FixedSingle; ControlBox = false; MinimizeBox = MaximizeBox = false;
             base.Text = "TrayMixer"; ShowInTaskbar = false; TopMost = true; StartPosition = FormStartPosition.Manual;
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.Opaque, true);
@@ -392,6 +428,7 @@ namespace TrayMixer
             fMediaGlyph = new Font(Theme.GlyphName, S(16), GraphicsUnit.Pixel);
             fBadge = new Font(Theme.GlyphName, S(7), GraphicsUnit.Pixel);
             sync.Tick += delegate { RefreshContent(false); RefreshMedia(); };
+            timelineFrames.Tick += delegate { UpdateTimelineFrame(); };
         }
 
         int S(float v) { return (int)Math.Round(v * s); }
@@ -403,11 +440,31 @@ namespace TrayMixer
             if (m.Msg == 0x83 && m.WParam != IntPtr.Zero) { m.Result = IntPtr.Zero; return; } // WM_NCCALCSIZE: всё окно — клиентская область
             if (m.Msg == 0x84) { m.Result = (IntPtr)1; return; }                               // WM_NCHITTEST: HTCLIENT
             base.WndProc(ref m);
+            if (backdrop == FrostedGlass && (m.Msg == 0x001A || m.Msg == 0x007E || m.Msg == 0x031A)) // WM_SETTINGCHANGE, WM_DISPLAYCHANGE, WM_THEMECHANGED
+            {
+                wallpaper.Dispose();
+                if (Visible)
+                {
+                    T = Theme.Load(true);
+                    ApplyBackdrop();
+                }
+            }
         }
 
         protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); ApplyBackdrop(); }
 
-        public int Backdrop { get { return backdrop; } set { backdrop = value; ApplyBackdrop(); } }
+        public int Backdrop
+        {
+            get { return backdrop; }
+            set
+            {
+                if (backdrop == value) return;
+                backdrop = value;
+                T = Theme.Load(backdrop == FrostedGlass);
+                wallpaper.Dispose();
+                ApplyBackdrop();
+            }
+        }
 
         void ApplyBackdrop()
         {
@@ -416,14 +473,23 @@ namespace TrayMixer
             Native.DwmExtendFrameIntoClientArea(Handle, ref m);
             int dark = T.Light ? 0 : 1; Native.DwmSetWindowAttribute(Handle, 20, ref dark, 4);  // тёмная рамка
             int round = 2; Native.DwmSetWindowAttribute(Handle, 33, ref round, 4);                // скруглённые углы
-            int bd = backdrop; Native.DwmSetWindowAttribute(Handle, 38, ref bd, 4);               // Mica / Acrylic
+            bool frosted = backdrop == FrostedGlass;
+            frostedTransparency = frosted && FrostedWallpaper.Enabled(backdrop);
+            int bd = frosted ? DwmBackdropNone : backdrop;
+            Native.DwmSetWindowAttribute(Handle, DwmSystemBackdropType, ref bd, sizeof(int));
+            int border = frostedTransparency ? -2 : -1; // DWMWA_COLOR_NONE / DWMWA_COLOR_DEFAULT
+            Native.DwmSetWindowAttribute(Handle, 34, ref border, sizeof(int));
+            Invalidate();
         }
 
         // ── Показ / скрытие ──
         public void ShowPopup()
         {
-            var nt = Theme.Load();
-            if (!nt.SameAs(T)) { T = nt; ApplyBackdrop(); }
+            var nt = Theme.Load(backdrop == FrostedGlass);
+            if (!nt.SameAs(T) || backdrop == FrostedGlass) { T = nt; ApplyBackdrop(); }
+            wallpaper.Dispose();
+            mediaTip.BackColor = FrostedWallpaper.BaseColor(T, Backdrop);
+            mediaTip.ForeColor = T.Fg;
             RefreshContent(true);
             Show(); Activate(); Native.SetForegroundWindow(Handle);
             if (!Visible) return;
@@ -436,9 +502,14 @@ namespace TrayMixer
         public void HidePopup()
         {
             if (!Visible) return;
-            Hide(); sync.Stop();
+            rowFlyout.Close();
+            Hide(); sync.Stop(); timelineFrames.Stop();
+            popupGeneration++;
             items.Clear(); signature = ""; hoverItem = dragItem = null;
             track = null;
+            pendingSeek = null;
+            paintedTimelinePixel = -1;
+            if (seeking != null) { seeking = null; Capture = false; }
             focusedMedia = pressedMedia = -1;
             mediaTip.SetToolTip(this, null);
             batteryAge.Reset();
@@ -449,25 +520,32 @@ namespace TrayMixer
             hiddenFor.Restart();
         }
 
-        protected override void OnDeactivate(EventArgs e) { base.OnDeactivate(e); HidePopup(); }
+        protected override void OnDeactivate(EventArgs e) { base.OnDeactivate(e); if (!rowFlyout.Visible) HidePopup(); }
         protected override bool ProcessCmdKey(ref Message msg, Keys key)
         {
             if (key == Keys.Escape) { HidePopup(); return true; }
             if ((key == Keys.Tab || key == (Keys.Shift | Keys.Tab)) && track != null)
             {
                 int step = key == Keys.Tab ? 1 : -1;
-                int start = focusedMedia < 0 ? (step > 0 ? -1 : 3) : focusedMedia;
-                for (int i = 1; i <= 3; i++)
+                int start = focusedMedia < 0 ? (step > 0 ? -1 : 4) : focusedMedia;
+                for (int i = 1; i <= 4; i++)
                 {
-                    int candidate = (start + step * i + 3) % 3;
-                    if (!track.CanExecute((MediaAction)candidate)) continue;
+                    int candidate = (start + step * i + 4) % 4;
+                    if (!MediaEnabled(candidate)) continue;
                     focusedMedia = candidate;
                     ScrollBy(-scrollOffset);
                     Invalidate();
                     return true;
                 }
             }
-            if ((key == Keys.Enter || key == Keys.Space) && focusedMedia >= 0)
+            if (focusedMedia == TimelineIndex && MediaEnabled(TimelineIndex) && (key == Keys.Left || key == Keys.Right || key == Keys.Home || key == Keys.End))
+            {
+                long ticks = key == Keys.Home ? track.Start : key == Keys.End ? track.End
+                    : TimelinePosition() + (key == Keys.Left ? -5 : 5) * TimeSpan.TicksPerSecond;
+                SeekMedia(track, ticks);
+                return true;
+            }
+            if ((key == Keys.Enter || key == Keys.Space) && focusedMedia >= 0 && focusedMedia < TimelineIndex)
             {
                 ExecuteMedia(focusedMedia);
                 return true;
@@ -486,18 +564,87 @@ namespace TrayMixer
         {
             if (!Visible || readingMedia) return;
             readingMedia = true;
+            int generation = popupGeneration;
             MediaTrack next = null;
             try { next = await media.ReadAsync(); }
-            catch (Exception e) { Debug.WriteLine(e); }
+            catch (Exception e) { Debug.WriteLine(e); return; }
             finally { readingMedia = false; }
             if (IsDisposed || !Visible) return;
+            if (generation != popupGeneration) { RefreshMedia(); return; }
             track = next;
+            if (seeking != null && (!seeking.SameTrack(track) || !track.CanSeek))
+            {
+                seeking = null;
+                Capture = false;
+            }
+            if (pendingSeek != null && (!pendingSeek.Source.SameTrack(track) || !track.HasTimeline
+                || SeekPositionReported(pendingSeek, track)))
+                pendingSeek = null;
             if (focusedMedia >= 0 && !MediaEnabled(focusedMedia)) focusedMedia = -1;
             UpdateMediaTip();
-            Invalidate();
+            UpdateTimelineTimer();
+            InvalidateMedia();
         }
 
-        bool MediaEnabled(int index) { return track != null && track.CanExecute((MediaAction)index); }
+        bool MediaEnabled(int index)
+        {
+            return track != null && (index == TimelineIndex ? track.CanSeek : track.CanExecute((MediaAction)index));
+        }
+
+        long TimelinePosition()
+        {
+            if (seeking != null) return seekTarget;
+            if (pendingSeek == null) return track.Position;
+            return track.ProjectPosition(pendingSeek.Target, pendingSeek.BeforeSend == null ? TimeSpan.Zero : pendingSeek.Age.Elapsed);
+        }
+
+        static bool SeekPositionReported(SeekRequest request, MediaTrack next)
+        {
+            var before = request.BeforeSend;
+            if (before == null || next.PositionUpdated < before.PositionUpdated
+                || (next.PositionUpdated == before.PositionUpdated && next.ReportedPosition == before.ReportedPosition))
+                return false;
+            // The app may round the requested position and publish it before the next poll.
+            long tolerance = TimeSpan.TicksPerSecond * 3 / 4;
+            long expected = next.ProjectPosition(request.Target, request.Age.Elapsed);
+            return Math.Abs((double)next.ReportedPosition - request.Target) <= tolerance
+                || Math.Abs((double)next.Position - expected) <= tolerance;
+        }
+
+        void SeekMedia(MediaTrack source, long ticks)
+        {
+            if (!source.SameTrack(track) || !track.CanSeek) return;
+            pendingSeek = new SeekRequest(track, track.ClampSeek(ticks));
+            UpdateTimelineTimer();
+            InvalidateTimeline();
+        }
+
+        async void FlushSeek()
+        {
+            var request = pendingSeek;
+            if (sendingMedia || request == null || request.BeforeSend != null || request.Age.ElapsedMilliseconds < 75) return;
+            if (!request.Source.SameTrack(track) || !track.CanSeek)
+            {
+                pendingSeek = null;
+                return;
+            }
+            request.BeforeSend = track;
+            request.Age.Restart();
+            sendingMedia = true;
+            bool accepted = false;
+            try { accepted = await request.BeforeSend.Seek(request.Target); }
+            catch (Exception e) { Debug.WriteLine(e); }
+            finally { sendingMedia = false; }
+            if (IsDisposed || !Visible) return;
+            if (!accepted && pendingSeek == request)
+            {
+                pendingSeek = null;
+                InvalidateTimeline();
+            }
+            FlushSeek();
+            UpdateTimelineTimer();
+            RefreshMedia();
+        }
 
         async void ExecuteMedia(int index)
         {
@@ -506,7 +653,53 @@ namespace TrayMixer
             try { await track.Execute((MediaAction)index); }
             catch (Exception e) { Debug.WriteLine(e); }
             finally { sendingMedia = false; }
-            if (!IsDisposed) RefreshMedia();
+            if (IsDisposed || !Visible) return;
+            FlushSeek();
+            RefreshMedia();
+        }
+
+        void UpdateTimelineTimer()
+        {
+            timelineFrames.Enabled = Visible && (pendingSeek != null || (track != null && track.HasTimeline && track.Playing));
+        }
+
+        void UpdateTimelineFrame()
+        {
+            FlushSeek();
+            var request = pendingSeek;
+            if (request != null && request.BeforeSend != null)
+            {
+                long age = request.Age.ElapsedMilliseconds;
+                if (age >= 2500)
+                {
+                    pendingSeek = null;
+                    UpdateTimelineTimer();
+                    RefreshMedia();
+                }
+                else if (age - request.LastPoll >= 125)
+                {
+                    request.LastPoll = age;
+                    RefreshMedia();
+                }
+            }
+            if (seeking != null || track == null || !track.HasTimeline || items.Count == 0) return;
+            if (TimelinePixel(TimelineRect(items[0])) != paintedTimelinePixel) InvalidateTimeline();
+        }
+
+        void InvalidateMedia()
+        {
+            if (items.Count == 0) return;
+            var row = items[0];
+            Invalidate(new Rectangle(0, row.Y - scrollOffset, ClientSize.Width, row.H));
+        }
+
+        void InvalidateTimeline()
+        {
+            if (items.Count == 0) return;
+            var area = TimelineRect(items[0]);
+            area.Offset(0, -scrollOffset);
+            area.Inflate(S(5), 0);
+            Invalidate(area);
         }
 
         // ── Данные ──
@@ -541,7 +734,7 @@ namespace TrayMixer
 
         public void RefreshContent(bool force)
         {
-            if (dragItem != null) return;
+            if (dragItem != null || seeking != null) return;
             List<DeviceInfo> devs; List<AppInfo> apps;
             try { devs = Audio.Devices(); apps = Audio.Apps(); }
             catch
@@ -676,6 +869,15 @@ namespace TrayMixer
             return new RectangleF(S(L), it.Y + S(5), right - S(L), S(20));
         }
         RectangleF MediaButton(Item it, int i) { return new RectangleF(Width - S(22 + 36 * (3 - i)), it.Y + S(10), S(34), S(34)); }
+
+        Rectangle TimelineRect(Item it) { return new Rectangle(S(20), it.Y + S(44), Math.Max(1, ClientSize.Width - S(40)), S(14)); }
+
+        long TimelineTarget(int x)
+        {
+            var area = TimelineRect(items[0]);
+            double fraction = Math.Max(0, Math.Min(1, (x - area.Left) / (double)area.Width));
+            return seeking.ClampSeek(seeking.Start + (long)((seeking.End - seeking.Start) * fraction));
+        }
         RectangleF SliderRect(Item it) { return new RectangleF(S(L - Rad), it.Y + S(25), Width - S(M + ValW + 12 - Rad) - S(L - Rad), S(22)); }
         RectangleF ValueRect(int y, int h)
         {
@@ -690,11 +892,12 @@ namespace TrayMixer
         {
             int w = ClientSize.Width, h = ClientSize.Height;
             if (w <= 0 || h <= 0) return;
-            if (!EnsureDib(w, h)) { Render(e.Graphics); return; }
-            using (var g = Graphics.FromImage(surface)) Render(g);
+            var clip = e.ClipRectangle;
+            if (!EnsureDib(w, h)) { Render(e.Graphics, clip); return; }
+            using (var g = Graphics.FromImage(surface)) Render(g, clip);
             Native.GdiFlush();
             IntPtr hdc = e.Graphics.GetHdc();
-            try { Native.BitBlt(hdc, 0, 0, w, h, memDC, 0, 0, 0x00CC0020); }
+            try { Native.BitBlt(hdc, clip.X, clip.Y, clip.Width, clip.Height, memDC, clip.X, clip.Y, 0x00CC0020); }
             finally { e.Graphics.ReleaseHdc(hdc); }
         }
 
@@ -733,8 +936,11 @@ namespace TrayMixer
             if (disposing)
             {
                 sync.Dispose();
+                timelineFrames.Dispose();
+                rowFlyout.Dispose();
                 rowMenu.Dispose();
                 mediaTip.Dispose();
+                wallpaper.Dispose();
                 FreeDib();
                 fText.Dispose(); fValue.Dispose(); fBattery.Dispose(); fGlyph.Dispose(); fMediaGlyph.Dispose(); fBadge.Dispose();
                 Audio.ClearMetadata();
@@ -742,20 +948,30 @@ namespace TrayMixer
             base.Dispose(disposing);
         }
 
-        void Render(Graphics g)
+        void Render(Graphics g, Rectangle clip)
         {
             // Acrylic у DWM выходит светло-серым и плоским — тонируем, как флайауты Windows 11
-            g.Clear(backdrop == Acrylic ? T.Tint : Color.Transparent);
+            var background = backdrop == FrostedGlass ? FrostedWallpaper.BaseColor(T, backdrop)
+                : backdrop == Acrylic ? T.Tint : Color.Transparent;
+            g.SetClip(clip, CombineMode.Intersect);
+            g.CompositingMode = CompositingMode.SourceCopy;
+            using (var brush = new SolidBrush(background)) g.FillRectangle(brush, clip);
+            g.CompositingMode = CompositingMode.SourceOver;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            if (frostedTransparency)
+            {
+                wallpaper.Paint(g, this, s);
+                FrostedWallpaper.PaintOutline(g, ClientSize, s);
+            }
             var drawingState = g.Save();
             g.TranslateTransform(0, -scrollOffset);
             using (var sf = new StringFormat(StringFormat.GenericTypographic) { LineAlignment = StringAlignment.Center, Trimming = StringTrimming.EllipsisCharacter, FormatFlags = StringFormatFlags.NoWrap })
             {
                 foreach (var it in items)
                 {
-                    if (it.Y + it.H <= scrollOffset || it.Y >= scrollOffset + ClientSize.Height) continue;
+                    if (it.Y + it.H <= scrollOffset + clip.Top || it.Y >= scrollOffset + clip.Bottom) continue;
                     if (it.K == Kind.Media) DrawMedia(g, it, sf);
                     else if (it.K == Kind.Note) Str(g, it.Text, fText, T.Sub, new RectangleF(S(M), it.Y, Width - S(2 * M), it.H), sf);
                     else if (it.K == Kind.Sep) using (var b = new SolidBrush(T.Sep)) g.FillRectangle(b, S(M), it.Y + it.H / 2, Width - S(2 * M), Math.Max(1, S(1)));
@@ -778,7 +994,7 @@ namespace TrayMixer
             RefreshContent(true);
             using (var bmp = new Bitmap(Width, Height, PixelFormat.Format32bppPArgb))
             {
-                using (var g = Graphics.FromImage(bmp)) Render(g);
+                using (var g = Graphics.FromImage(bmp)) Render(g, ClientRectangle);
                 using (var outp = new Bitmap(Width, Height))
                 {
                     using (var g = Graphics.FromImage(outp))
@@ -795,16 +1011,17 @@ namespace TrayMixer
 
         void DrawMedia(Graphics g, Item it, StringFormat sf)
         {
-            Fill(g, T.MediaBackground, Round(new RectangleF(S(8), it.Y, Width - S(16), S(54)), S(8)));
+            bool hasTimeline = track != null && track.HasTimeline;
+            Fill(g, T.MediaBackground, Round(new RectangleF(S(8), it.Y, Width - S(16), S(hasTimeline ? 59 : 54)), S(8)));
             string title = track == null ? (Loc.En ? "Nothing playing" : "Нет активного трека") : track.Title;
             if (string.IsNullOrWhiteSpace(title)) title = Loc.En ? "Media playback" : "Воспроизведение";
             string artist = track == null ? null : track.Artist;
             bool hasArtist = !string.IsNullOrWhiteSpace(artist);
             float textWidth = Math.Max(1, MediaButton(it, 0).X - S(28));
             Str(g, title, fText, track == null ? T.Sub : T.Fg,
-                new RectangleF(S(20), it.Y + S(hasArtist ? 8 : 18), textWidth, S(18)), sf);
+                new RectangleF(S(20), it.Y + S(hasArtist ? 7 : 17), textWidth, S(18)), sf);
             if (hasArtist)
-                Str(g, artist, fText, T.Sub, new RectangleF(S(20), it.Y + S(27), textWidth, S(18)), sf);
+                Str(g, artist, fText, T.Sub, new RectangleF(S(20), it.Y + S(25), textWidth, S(18)), sf);
 
             string[] glyphs = { "\uE892", track != null && track.Playing ? "\uE769" : "\uE768", "\uE893" };
             using (var center = new StringFormat(sf) { Alignment = StringAlignment.Center })
@@ -818,6 +1035,31 @@ namespace TrayMixer
                         using (var pen = new Pen(T.Accent, Math.Max(1, S(1)))) g.DrawPath(pen, outline);
                     Str(g, glyphs[i], fMediaGlyph, enabled ? (i == 1 ? T.Accent : T.Fg) : T.Track, r, center);
                 }
+            if (hasTimeline) DrawTimeline(g, it);
+        }
+
+        void DrawTimeline(Graphics g, Item it)
+        {
+            var area = TimelineRect(it);
+            bool active = track.CanSeek && (seeking != null || hoverPart == TimelinePart || focusedMedia == TimelineIndex);
+            float center = area.Top + area.Height / 2f, height = Math.Max(1, S(active ? 3 : 2));
+            paintedTimelinePixel = TimelinePixel(area);
+            float played = paintedTimelinePixel / 4f;
+            Fill(g, Color.FromArgb(active ? 76 : 44, T.Fg), Pill(new RectangleF(area.Left, center - height / 2, area.Width, height)));
+            if (played > 0)
+                Fill(g, track.CanSeek ? T.Accent : T.Sub, Pill(new RectangleF(area.Left, center - height / 2, played, height)));
+            if (active)
+            {
+                float diameter = S(7);
+                using (var brush = new SolidBrush(T.Accent))
+                    g.FillEllipse(brush, area.Left + played - diameter / 2, center - diameter / 2, diameter, diameter);
+            }
+        }
+
+        int TimelinePixel(Rectangle area)
+        {
+            double progress = (TimelinePosition() - track.Start) / (double)(track.End - track.Start);
+            return (int)Math.Round(area.Width * 4 * Math.Max(0, Math.Min(1, progress)));
         }
 
         void DrawBattery(Graphics g, Item it, string label, RectangleF title)
@@ -924,6 +1166,7 @@ namespace TrayMixer
             p.Y += scrollOffset;
             if (it.K == Kind.Media)
             {
+                if (MediaEnabled(TimelineIndex) && TimelineRect(it).Contains(p)) return TimelinePart;
                 for (int i = 0; i < 3; i++)
                     if (MediaEnabled(i) && MediaButton(it, i).Contains(p)) return MediaPart + i;
                 return 0;
@@ -961,6 +1204,16 @@ namespace TrayMixer
 
         protected override void OnMouseMove(MouseEventArgs e)
         {
+            if (seeking != null)
+            {
+                long target = TimelineTarget(e.X);
+                if (target != seekTarget)
+                {
+                    seekTarget = target;
+                    InvalidateTimeline();
+                }
+                return;
+            }
             if (dragItem != null) { SetFromX(dragItem, e.X); return; }
             var it = RowAt(e.Location); int part = PartAt(it, e.Location);
             if (it != hoverItem || part != hoverPart)
@@ -976,9 +1229,10 @@ namespace TrayMixer
         {
             string tip = null;
             int button = hoverPart - MediaPart;
-            if (button >= 0 && MediaEnabled(button))
+            if (seeking == null && button >= 0 && MediaEnabled(button))
             {
-                if (button == 0) tip = Loc.En ? "Previous track" : "Предыдущий трек";
+                if (button == TimelineIndex) tip = Loc.Text("Перемотка", "Seek playback");
+                else if (button == 0) tip = Loc.En ? "Previous track" : "Предыдущий трек";
                 else if (button == 2) tip = Loc.En ? "Next track" : "Следующий трек";
                 else if (track.Playing) tip = Loc.En ? "Pause" : "Пауза";
                 else tip = Loc.En ? "Play" : "Воспроизвести";
@@ -988,7 +1242,7 @@ namespace TrayMixer
 
         protected override void OnMouseLeave(EventArgs e)
         {
-            if (dragItem != null) return;
+            if (dragItem != null || seeking != null) return;
             hoverItem = null;
             hoverPart = 0;
             UpdateMediaTip();
@@ -1021,10 +1275,20 @@ namespace TrayMixer
                 }
                 rowMenu.MenuItems.Add(new MenuItem(Loc.Text("Скрыть «", "Hide “") + row.Label.Replace("&", "&&") + Loc.Text("»", "”"),
                     delegate { Hidden.Hide(row.Key, row.Text); RefreshContent(true); }));
-                rowMenu.Show(this, e.Location);
+                rowFlyout.RefreshItems();
+                rowFlyout.Show(this, e.Location);
                 return;
             }
             if (e.Button != MouseButtons.Left) return;
+            if (part == TimelinePart)
+            {
+                seeking = track;
+                seekTarget = TimelineTarget(e.X);
+                Capture = true;
+                UpdateMediaTip();
+                InvalidateTimeline();
+                return;
+            }
             pressedMedia = part >= MediaPart ? part - MediaPart : -1;
             if (pressedMedia >= 0) return;
             if (part == 1) { try { it.SetMute(!it.Muted); } catch { } it.Sync(); Invalidate(); }
@@ -1034,6 +1298,18 @@ namespace TrayMixer
 
         protected override void OnMouseUp(MouseEventArgs e)
         {
+            if (e.Button == MouseButtons.Left && seeking != null)
+            {
+                var source = seeking;
+                long target = TimelineTarget(e.X);
+                seeking = null;
+                Capture = false;
+                SeekMedia(source, target);
+                OnMouseMove(e);
+                UpdateMediaTip();
+                InvalidateTimeline();
+                return;
+            }
             if (dragItem != null) { dragItem = null; Capture = false; Invalidate(); }
             if (e.Button != MouseButtons.Left || pressedMedia < 0) return;
             int index = pressedMedia;
@@ -1041,8 +1317,18 @@ namespace TrayMixer
             if (PartAt(RowAt(e.Location), e.Location) == MediaPart + index) ExecuteMedia(index);
         }
 
+        protected override void OnMouseCaptureChanged(EventArgs e)
+        {
+            base.OnMouseCaptureChanged(e);
+            if (Capture || seeking == null) return;
+            seeking = null;
+            UpdateMediaTip();
+            InvalidateTimeline();
+        }
+
         protected override void OnMouseWheel(MouseEventArgs e)
         {
+            if (seeking != null) return;
             var it = RowAt(e.Location);
             if ((ModifierKeys & Keys.Shift) != 0 || e.X < S(M) || e.X >= Width - S(M) || (it != null && it.K == Kind.Media))
             {
@@ -1124,18 +1410,21 @@ namespace TrayMixer
     {
         readonly ContextMenu model;
         readonly float scale;
+        readonly Func<int> getBackdrop;
         Font menuFont;
         Theme theme;
-        internal TrayFlyout(ContextMenu model, float scale)
+        int backdrop;
+        internal TrayFlyout(ContextMenu model, float scale, Func<int> getBackdrop)
         {
-            this.model = model; this.scale = scale;
+            this.model = model; this.scale = scale; this.getBackdrop = getBackdrop;
             AutoSize = true; ShowImageMargin = false; ShowCheckMargin = false;
             DropShadowEnabled = true;
         }
         int S(float v) { return (int)Math.Round(v * scale); }
         internal void RefreshItems()
         {
-            theme = Theme.Load();
+            backdrop = getBackdrop();
+            theme = Theme.Load(backdrop == Popup.FrostedGlass);
             ClearItems(Items);
             if (menuFont != null) menuFont.Dispose();
             menuFont = new Font(Theme.FontName, S(14), GraphicsUnit.Pixel);
@@ -1146,21 +1435,10 @@ namespace TrayMixer
         {
             menu.Font = menuFont;
             menu.Padding = new Padding(S(6));
-            menu.BackColor = theme.Light ? Color.FromArgb(243, 243, 243) : Color.FromArgb(32, 32, 32);
-            menu.ForeColor = theme.Fg;
-            menu.Renderer = new FlyoutRenderer(theme, scale);
+            FlyoutRenderer.Apply(menu, theme, scale, backdrop);
             menu.MinimumSize = new Size(S(256), 0);
-            menu.Opened -= RoundWindow;
-            menu.Opened += RoundWindow;
             var drop = menu as ToolStripDropDownMenu;
             if (drop != null) { drop.ShowImageMargin = false; drop.ShowCheckMargin = false; }
-        }
-        void RoundWindow(object sender, EventArgs e)
-        {
-            var menu = (ToolStripDropDown)sender;
-            int round = 2, dark = theme.Light ? 0 : 1;
-            Native.DwmSetWindowAttribute(menu.Handle, 33, ref round, 4);
-            Native.DwmSetWindowAttribute(menu.Handle, 20, ref dark, 4);
         }
         static void ClearItems(ToolStripItemCollection items)
         {
@@ -1168,14 +1446,18 @@ namespace TrayMixer
         }
         void Populate(ToolStripItemCollection target, Menu.MenuItemCollection source)
         {
+            int width = S(244);
+            foreach (MenuItem item in source)
+                if (item.Visible && item.Text != "-")
+                    width = Math.Max(width, Math.Min(S(420), TextRenderer.MeasureText(item.Text, menuFont).Width + S(60)));
             foreach (MenuItem item in source)
             {
                 if (!item.Visible) continue;
-                if (item.Text == "-") { target.Add(new ToolStripSeparator { AutoSize = false, Height = S(9), Width = S(232) }); continue; }
+                if (item.Text == "-") { target.Add(new ToolStripSeparator { AutoSize = false, Height = S(9), Width = width }); continue; }
                 var action = item;
                 var row = new ToolStripMenuItem(item.Text) {
                     Enabled = item.Enabled, Checked = item.Checked, CheckOnClick = false,
-                    AutoSize = false, Size = new Size(Math.Max(S(244), Math.Min(S(420), TextRenderer.MeasureText(item.Text, menuFont).Width + S(60))), S(30)),
+                    AutoSize = false, Size = new Size(width, S(30)),
                     Padding = new Padding(S(26), 0, S(22), 0),
                     AccessibleName = item.Text
                 };
@@ -1183,15 +1465,11 @@ namespace TrayMixer
                 {
                     Style(row.DropDown);
                     Populate(row.DropDownItems, item.MenuItems);
-                    row.DropDownOpening += delegate {
-                        ClearItems(row.DropDownItems);
-                        Populate(row.DropDownItems, action.MenuItems);
-                    };
                 }
                 else row.Click += delegate { action.PerformClick(); };
                 target.Add(row);
                 var owner = row.Owner as ToolStripDropDown;
-                if (owner != null) owner.MinimumSize = new Size(Math.Max(owner.MinimumSize.Width, row.Width + S(12)), 0);
+                if (owner != null) owner.MinimumSize = new Size(width + S(12), 0);
             }
         }
         internal void ShowFlyout()
@@ -1210,15 +1488,73 @@ namespace TrayMixer
         internal sealed class FlyoutRenderer : ToolStripProfessionalRenderer
         {
             readonly Theme t; readonly float s;
+            readonly FrostedWallpaper wallpaper;
+            readonly Color background, tint;
+            readonly bool frosted;
             int S(float v) { return (int)Math.Round(v * s); }
-            internal FlyoutRenderer(Theme t, float s) { this.t = t; this.s = s; RoundedEdges = false; }
-            protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e) { e.Graphics.Clear(e.ToolStrip.BackColor); }
+            FlyoutRenderer(Theme t, float s, int backdrop)
+            {
+                this.t = t; this.s = s; RoundedEdges = false;
+                background = FrostedWallpaper.BaseColor(t, backdrop);
+                tint = FrostedWallpaper.SurfaceTint(background, backdrop);
+                frosted = backdrop == Popup.FrostedGlass;
+                if (FrostedWallpaper.Enabled(backdrop)) wallpaper = new FrostedWallpaper();
+            }
+
+            internal static void Apply(ToolStripDropDown menu, Theme theme, float scale, int backdrop)
+            {
+                ReleaseWallpaper(menu, EventArgs.Empty);
+                menu.BackColor = FrostedWallpaper.BaseColor(theme, backdrop);
+                menu.ForeColor = theme.Fg;
+                menu.Renderer = new FlyoutRenderer(theme, scale, backdrop);
+                menu.Opened -= RoundWindow;
+                menu.Opened += RoundWindow;
+                menu.Closed -= OnClosed;
+                menu.Closed += OnClosed;
+                menu.Disposed -= ReleaseWallpaper;
+                menu.Disposed += ReleaseWallpaper;
+            }
+
+            static void RoundWindow(object sender, EventArgs e)
+            {
+                var menu = (ToolStripDropDown)sender;
+                var renderer = (FlyoutRenderer)menu.Renderer;
+                int round = 2, dark = renderer.t.Light ? 0 : 1;
+                int border = renderer.wallpaper != null && renderer.frosted ? -2 : -1;
+                Native.DwmSetWindowAttribute(menu.Handle, 33, ref round, 4);
+                Native.DwmSetWindowAttribute(menu.Handle, 20, ref dark, 4);
+                Native.DwmSetWindowAttribute(menu.Handle, 34, ref border, 4);
+            }
+
+            static void OnClosed(object sender, ToolStripDropDownClosedEventArgs e) { ReleaseWallpaper(sender, e); }
+
+            static void ReleaseWallpaper(object sender, EventArgs e)
+            {
+                var renderer = ((ToolStripDropDown)sender).Renderer as FlyoutRenderer;
+                if (renderer != null && renderer.wallpaper != null) renderer.wallpaper.Dispose();
+            }
+
+            void PaintBackground(Graphics g, ToolStrip strip, Rectangle region)
+            {
+                using (var brush = new SolidBrush(background)) g.FillRectangle(brush, new Rectangle(Point.Empty, region.Size));
+                if (wallpaper != null) wallpaper.Paint(g, strip, s, region, tint);
+            }
+            protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e) { PaintBackground(e.Graphics, e.ToolStrip, e.ToolStrip.ClientRectangle); }
             protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
             {
-                using (var p = new Pen(t.Sep)) e.Graphics.DrawRectangle(p, 0, 0, e.ToolStrip.Width - 1, e.ToolStrip.Height - 1);
+                if (wallpaper != null && frosted) FrostedWallpaper.PaintOutline(e.Graphics, e.ToolStrip.Size, s);
+                else using (var p = new Pen(t.Sep)) e.Graphics.DrawRectangle(p, 0, 0, e.ToolStrip.Width - 1, e.ToolStrip.Height - 1);
             }
             protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
             {
+                // ToolStrip reuses an item buffer as submenus close. Paint the whole row before blending its highlight.
+                PaintBackground(e.Graphics, e.ToolStrip, e.Item.Bounds);
+                if (e.Item.Enabled && (e.Item.Selected || e.Item.Pressed))
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    using (var path = Popup.Round(new RectangleF(S(2), 1, e.Item.Width - S(4), e.Item.Height - 2), S(4)))
+                    using (var brush = new SolidBrush(t.Hover)) e.Graphics.FillPath(brush, path);
+                }
                 var checkedItem = e.Item as ToolStripMenuItem;
                 if (checkedItem != null && checkedItem.Checked)
                     using (var pen = new Pen(t.Accent, Math.Max(1, S(1.5f)))) {
@@ -1226,16 +1562,6 @@ namespace TrayMixer
                         int y = e.Item.Height / 2;
                         e.Graphics.DrawLines(pen, new[] { new Point(S(9), y), new Point(S(12), y + S(3)), new Point(S(18), y - S(4)) });
                     }
-                if (!e.Item.Selected || !e.Item.Enabled) return;
-                var r = new RectangleF(0, 1, e.Item.Width, e.Item.Height - 2);
-                using (var p = new GraphicsPath())
-                using (var b = new SolidBrush(t.Hover))
-                {
-                    float d = S(8);
-                    p.AddArc(r.Left, r.Top, d, d, 180, 90); p.AddArc(r.Right - d, r.Top, d, d, 270, 90);
-                    p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90); p.AddArc(r.Left, r.Bottom - d, d, d, 90, 90); p.CloseFigure();
-                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias; e.Graphics.FillPath(b, p);
-                }
             }
             protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
             {
@@ -1432,13 +1758,65 @@ namespace TrayMixer
         }
     }
 
-    sealed class SettingsLabel : Label
+    abstract class MixerSettingsDialog : Form
     {
-        public bool Wrap { get; set; }
+        protected readonly Theme theme;
+        readonly FrostedWallpaper wallpaper;
+        readonly float scale;
+        readonly Color tint;
+
+        protected MixerSettingsDialog(float scale, int backdrop)
+        {
+            this.scale = scale;
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+            theme = Theme.Load(backdrop == Popup.FrostedGlass);
+            BackColor = FrostedWallpaper.BaseColor(theme, backdrop);
+            tint = backdrop == Popup.FrostedGlass ? Color.FromArgb(theme.Light ? 200 : 104, BackColor)
+                : FrostedWallpaper.SurfaceTint(BackColor, backdrop);
+            ForeColor = theme.Light ? Color.FromArgb(27, 27, 27) : Color.FromArgb(244, 244, 244);
+            FieldColor = theme.Light ? Color.White : backdrop == Popup.FrostedGlass ? Color.FromArgb(35, 23, 23) : Color.FromArgb(43, 43, 43);
+            if (FrostedWallpaper.Enabled(backdrop)) wallpaper = new FrostedWallpaper();
+        }
+
+        protected Color FieldColor { get; private set; }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            int dark = theme.Light ? 0 : 1, round = 2;
+            int caption = ColorTranslator.ToWin32(BackColor), title = ColorTranslator.ToWin32(ForeColor);
+            Native.DwmSetWindowAttribute(Handle, 20, ref dark, 4);
+            Native.DwmSetWindowAttribute(Handle, 33, ref round, 4);
+            Native.DwmSetWindowAttribute(Handle, 35, ref caption, 4);
+            Native.DwmSetWindowAttribute(Handle, 36, ref title, 4);
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e) { }
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            GdiText.Draw(e.Graphics, Text, Font, ForeColor, ClientRectangle, StringAlignment.Near, wrap: Wrap);
+            using (var brush = new SolidBrush(BackColor)) e.Graphics.FillRectangle(brush, ClientRectangle);
+            if (wallpaper != null) wallpaper.Paint(e.Graphics, this, scale, ClientRectangle, tint);
+            base.OnPaint(e);
+        }
+
+        protected int S(float value) { return (int)Math.Round(value * scale); }
+
+        protected void DrawLabel(Graphics graphics, string text, Color color, Rectangle bounds, bool wrap = false)
+        {
+            GdiText.Draw(graphics, text, Font, color, bounds, StringAlignment.Near, wrap: wrap);
+        }
+
+        protected override void OnMove(EventArgs e)
+        {
+            base.OnMove(e);
+            if (wallpaper != null) Invalidate(true);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && wallpaper != null) wallpaper.Dispose();
+            base.Dispose(disposing);
         }
     }
 
@@ -1473,6 +1851,20 @@ namespace TrayMixer
 
         int S(float value) { return (int)Math.Round(value * scale); }
 
+        internal static void RoundControl(Control control, float radius)
+        {
+            if (radius <= 0 || control.Width <= 0 || control.Height <= 0) return;
+            var previous = control.Region;
+            using (var shape = Popup.Round(control.ClientRectangle, radius)) control.Region = new Region(shape);
+            if (previous != null) previous.Dispose();
+        }
+
+        protected override void OnSizeChanged(EventArgs e)
+        {
+            base.OnSizeChanged(e);
+            RoundControl(this, S(7));
+        }
+
         internal static void DrawFrame(Graphics graphics, Size size, int radius, Color fill, Color border)
         {
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
@@ -1487,6 +1879,7 @@ namespace TrayMixer
 
         protected override void OnPaint(PaintEventArgs e)
         {
+            e.Graphics.Clear(fill);
             DrawFrame(e.Graphics, ClientSize, S(7), fill, Focused || expanded ? theme.Accent : border);
             var textBounds = new Rectangle(S(10), 0, Width - S(picker ? 37 : 20), Height);
             GdiText.Draw(e.Graphics, Text, Font, ForeColor, textBounds, StringAlignment.Near);
@@ -1521,7 +1914,7 @@ namespace TrayMixer
         }
     }
 
-    sealed class SliderNameDialog : Form
+    sealed class SliderNameDialog : MixerSettingsDialog
     {
         sealed class Choice
         {
@@ -1536,15 +1929,11 @@ namespace TrayMixer
         Choice selected;
         readonly TextBox name = new TextBox { MaxLength = 120, BorderStyle = BorderStyle.None };
         readonly Button save, reset;
-        readonly Theme theme = Theme.Load();
-        readonly float scale;
         readonly Color fieldColor, fieldBorder, muted;
+        readonly string sliderCaption = Loc.Text("Ползунок", "Slider");
 
-        int S(int value) { return (int)Math.Round(value * scale); }
-
-        public SliderNameDialog(float scale, Font font)
+        public SliderNameDialog(float scale, Font font, int backdrop) : base(scale, backdrop)
         {
-            this.scale = scale;
             AutoScaleMode = AutoScaleMode.None;
             Font = font;
             Text = Loc.Text("Названия ползунков", "Slider names");
@@ -1552,26 +1941,18 @@ namespace TrayMixer
             MaximizeBox = MinimizeBox = ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterScreen;
             ClientSize = new Size(S(416), S(193));
-            BackColor = theme.Light ? Color.FromArgb(243, 243, 243) : Color.FromArgb(32, 32, 32);
-            ForeColor = theme.Light ? Color.FromArgb(27, 27, 27) : Color.FromArgb(244, 244, 244);
-            fieldColor = theme.Light ? Color.White : Color.FromArgb(43, 43, 43);
+            fieldColor = FieldColor;
             fieldBorder = theme.Light ? Color.FromArgb(193, 193, 193) : Color.FromArgb(75, 75, 75);
             muted = theme.Light ? Color.FromArgb(85, 85, 85) : Color.FromArgb(181, 181, 181);
             name.Font = font;
             name.BackColor = fieldColor;
             name.ForeColor = ForeColor;
-            string sliderCaption = Loc.Text("Ползунок", "Slider");
             sliders = new SettingsField(theme, scale, fieldColor, fieldBorder, true) { TabIndex = 0 };
             sliderMenu.Font = font;
-            sliderMenu.BackColor = BackColor;
-            sliderMenu.ForeColor = ForeColor;
             sliderMenu.ShowImageMargin = sliderMenu.ShowCheckMargin = false;
             sliderMenu.Padding = new Padding(S(5));
-            sliderMenu.Renderer = new TrayFlyout.FlyoutRenderer(theme, scale);
+            TrayFlyout.FlyoutRenderer.Apply(sliderMenu, theme, scale, backdrop);
             sliderMenu.Opened += delegate {
-                int round = 2, dark = theme.Light ? 0 : 1;
-                Native.DwmSetWindowAttribute(sliderMenu.Handle, 33, ref round, 4);
-                Native.DwmSetWindowAttribute(sliderMenu.Handle, 20, ref dark, 4);
                 sliders.Expanded = true;
                 if (selected != null) sliderMenu.Items[choices.IndexOf(selected)].Select();
             };
@@ -1587,19 +1968,16 @@ namespace TrayMixer
             AcceptButton = save;
             sliders.SetBounds(S(18), S(35), S(380), S(32));
             sliderMenu.MinimumSize = sliderMenu.MaximumSize = new Size(sliders.Width, 0);
-            var nameField = new Panel { TabIndex = 1 };
+            var nameField = new Panel { TabIndex = 1, BackColor = fieldColor };
             nameField.SetBounds(S(18), S(94), S(380), S(32));
+            SettingsField.RoundControl(nameField, S(7));
             name.SetBounds(S(10), (nameField.Height - name.PreferredHeight) / 2, nameField.Width - S(20), name.PreferredHeight);
             nameField.Controls.Add(name);
             nameField.Paint += PaintNameField;
             nameField.MouseDown += delegate { name.Focus(); };
             name.GotFocus += delegate { nameField.Invalidate(); };
             name.LostFocus += delegate { nameField.Invalidate(); };
-            var sliderLabel = new SettingsLabel { Text = sliderCaption, ForeColor = muted };
-            sliderLabel.SetBounds(S(20), S(13), S(378), S(19));
-            var nameLabel = new SettingsLabel { Text = name.AccessibleName, ForeColor = muted };
-            nameLabel.SetBounds(S(20), S(73), S(378), S(19));
-            Controls.AddRange(new Control[] { sliderLabel, sliders, nameLabel, nameField, reset, save });
+            Controls.AddRange(new Control[] { sliders, nameField, reset, save });
 
             string volume = Loc.Text("Громкость", "Volume");
             string brightness = Loc.Text("Яркость", "Brightness");
@@ -1627,11 +2005,18 @@ namespace TrayMixer
             SelectChoice(choices[0]);
         }
 
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            DrawLabel(e.Graphics, sliderCaption, muted, new Rectangle(S(20), S(13), S(378), S(19)));
+            DrawLabel(e.Graphics, name.AccessibleName, muted, new Rectangle(S(20), S(73), S(378), S(19)));
+        }
+
         void SelectChoice(Choice choice)
         {
             selected = choice;
             sliders.Text = choice.ToString();
-            sliders.AccessibleName = Loc.Text("Ползунок", "Slider") + ": " + sliders.Text;
+            sliders.AccessibleName = sliderCaption + ": " + sliders.Text;
             for (int i = 0; i < choices.Count; i++)
                 ((ToolStripMenuItem)sliderMenu.Items[i]).Checked = choices[i] == choice;
             LoadName();
@@ -1641,17 +2026,6 @@ namespace TrayMixer
         {
             if (disposing) sliderMenu.Dispose();
             base.Dispose(disposing);
-        }
-
-        protected override void OnHandleCreated(EventArgs e)
-        {
-            base.OnHandleCreated(e);
-            int dark = theme.Light ? 0 : 1, round = 2;
-            int caption = ColorTranslator.ToWin32(BackColor), title = ColorTranslator.ToWin32(ForeColor);
-            Native.DwmSetWindowAttribute(Handle, 20, ref dark, 4);
-            Native.DwmSetWindowAttribute(Handle, 33, ref round, 4);
-            Native.DwmSetWindowAttribute(Handle, 35, ref caption, 4);
-            Native.DwmSetWindowAttribute(Handle, 36, ref title, 4);
         }
 
         protected override bool ProcessDialogKey(Keys keyData)
@@ -1682,12 +2056,17 @@ namespace TrayMixer
                 this.muted = muted;
                 this.primary = primary;
                 FlatStyle = FlatStyle.Flat;
-                SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+            }
+
+            protected override void OnSizeChanged(EventArgs e)
+            {
+                base.OnSizeChanged(e);
+                SettingsField.RoundControl(this, (int)Math.Round(8 * scale));
             }
 
             protected override void OnPaint(PaintEventArgs e)
             {
-                e.Graphics.Clear(BackColor);
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 Color fill = fieldColor;
                 Color text = Enabled ? ForeColor : muted;
@@ -1696,8 +2075,9 @@ namespace TrayMixer
                     fill = theme.Accent;
                     text = (fill.R * 299 + fill.G * 587 + fill.B * 114) >= 145000 ? Color.FromArgb(22, 22, 22) : Color.White;
                 }
+                e.Graphics.Clear(fill);
                 var rect = new RectangleF(0.5f, 0.5f, Width - 1, Height - 1);
-                using (var shape = Popup.Round(rect, (int)Math.Round(6 * scale)))
+                using (var shape = Popup.Round(rect, (int)Math.Round(8 * scale)))
                 {
                     using (var brush = new SolidBrush(fill)) e.Graphics.FillPath(brush, shape);
                     if (Enabled && ClientRectangle.Contains(PointToClient(MousePosition)))
@@ -1738,66 +2118,57 @@ namespace TrayMixer
         }
     }
 
-    sealed class ShortcutDialog : Form
+    sealed class ShortcutDialog : MixerSettingsDialog
     {
-        readonly Theme theme = Theme.Load();
         readonly SettingsField input;
-        readonly SettingsLabel status = new SettingsLabel { Wrap = true };
+        readonly string caption = Loc.Text("Нажмите сочетание с Ctrl или Alt", "Press a combination with Ctrl or Alt");
+        readonly Color muted, statusColor;
+        string status;
         readonly Button save, disable;
         readonly Func<Keys, string> apply;
         readonly Keys original;
         readonly bool unavailable;
         Keys pending;
 
-        public ShortcutDialog(float scale, Font font, Keys shortcut, bool unavailable, Func<Keys, string> apply)
+        public ShortcutDialog(float scale, Font font, Keys shortcut, bool unavailable, Func<Keys, string> apply, int backdrop) : base(scale, backdrop)
         {
             this.apply = apply;
             this.unavailable = unavailable;
             pending = original = shortcut;
-            Func<int, int> s = value => (int)Math.Round(value * scale);
             Text = Loc.Text("Горячая клавиша", "Keyboard shortcut");
             Font = font;
             AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = MinimizeBox = ShowInTaskbar = false;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(s(396), s(174));
-            BackColor = theme.Light ? Color.FromArgb(243, 243, 243) : Color.FromArgb(32, 32, 32);
-            ForeColor = theme.Light ? Color.FromArgb(27, 27, 27) : Color.FromArgb(244, 244, 244);
-            Color fieldColor = theme.Light ? Color.White : Color.FromArgb(43, 43, 43);
+            ClientSize = new Size(S(396), S(174));
+            Color fieldColor = FieldColor;
             Color borderColor = theme.Light ? Color.FromArgb(193, 193, 193) : Color.FromArgb(75, 75, 75);
-            Color muted = theme.Light ? Color.FromArgb(85, 85, 85) : Color.FromArgb(181, 181, 181);
-            var caption = new SettingsLabel { Text = Loc.Text("Нажмите сочетание с Ctrl или Alt", "Press a combination with Ctrl or Alt"), ForeColor = muted };
-            caption.SetBounds(s(20), s(17), s(358), s(19));
+            muted = theme.Light ? Color.FromArgb(85, 85, 85) : Color.FromArgb(181, 181, 181);
+            statusColor = theme.Light ? Color.FromArgb(145, 40, 37) : Color.FromArgb(255, 170, 159);
             input = new SettingsField(theme, scale, fieldColor, borderColor, false)
-                { AccessibleDescription = caption.Text, TabIndex = 0 };
-            input.SetBounds(s(18), s(40), s(360), s(34));
+                { TabIndex = 0 };
+            input.SetBounds(S(18), S(40), S(360), S(34));
 
-            status.ForeColor = theme.Light ? Color.FromArgb(145, 40, 37) : Color.FromArgb(255, 170, 159);
-            status.SetBounds(s(18), s(83), s(360), s(36));
             disable = new SliderNameDialog.EditorButton(theme, scale, fieldColor, borderColor, muted, false)
                 { Text = Loc.Text("Отключить", "Disable"), TabIndex = 1 };
             save = new SliderNameDialog.EditorButton(theme, scale, fieldColor, borderColor, muted, true)
                 { Text = Loc.Text("Сохранить", "Save"), TabIndex = 2 };
-            disable.SetBounds(s(18), s(124), s(106), s(32));
-            save.SetBounds(s(266), s(124), s(112), s(32));
+            disable.SetBounds(S(18), S(124), S(106), S(32));
+            save.SetBounds(S(266), S(124), S(112), S(32));
             disable.Click += delegate { Apply(Keys.None); };
             save.Click += delegate { Apply(pending); };
             AcceptButton = save;
-            Controls.AddRange(new Control[] { caption, input, status, disable, save });
+            Controls.AddRange(new Control[] { input, disable, save });
             ActiveControl = input;
             UpdateChoice();
         }
 
-        protected override void OnHandleCreated(EventArgs e)
+        protected override void OnPaint(PaintEventArgs e)
         {
-            base.OnHandleCreated(e);
-            int dark = theme.Light ? 0 : 1, round = 2;
-            int caption = ColorTranslator.ToWin32(BackColor), text = ColorTranslator.ToWin32(ForeColor);
-            Native.DwmSetWindowAttribute(Handle, 20, ref dark, 4);
-            Native.DwmSetWindowAttribute(Handle, 33, ref round, 4);
-            Native.DwmSetWindowAttribute(Handle, 35, ref caption, 4);
-            Native.DwmSetWindowAttribute(Handle, 36, ref text, 4);
+            base.OnPaint(e);
+            DrawLabel(e.Graphics, caption, muted, new Rectangle(S(20), S(17), S(358), S(19)));
+            DrawLabel(e.Graphics, status, statusColor, new Rectangle(S(18), S(83), S(360), S(36)), wrap: true);
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -1821,16 +2192,23 @@ namespace TrayMixer
             input.AccessibleName = Text + ": " + input.Text;
             disable.Enabled = original != Keys.None;
             save.Enabled = pending != original || unavailable;
-            status.Text = pending == original && unavailable
+            SetStatus(pending == original && unavailable
                 ? Loc.Text("Сочетание недоступно. Выберите другое.", "This shortcut is unavailable. Choose another.")
-                : "";
+                : null);
+        }
+
+        void SetStatus(string value)
+        {
+            status = value;
+            input.AccessibleDescription = string.IsNullOrEmpty(value) ? caption : caption + ". " + value;
+            Invalidate(new Rectangle(S(18), S(83), S(360), S(36)));
         }
 
         void Apply(Keys shortcut)
         {
             var error = apply(shortcut);
             if (error == null) Close();
-            else status.Text = error;
+            else SetStatus(error);
         }
     }
 
@@ -1859,7 +2237,7 @@ namespace TrayMixer
             popup.CreateControl(); GC.KeepAlive(popup.Handle); // окно нужно сразу: через него приходят уведомления
 
             try { Native.SetPreferredAppMode(1); Native.FlushMenuThemes(); } catch { } // тёмное контекстное меню
-            flyout = new TrayFlyout(trayMenu, scale);
+            flyout = new TrayFlyout(trayMenu, scale, () => popup.Backdrop);
             icon = new TrayIcon(button => {
                 if (button == MouseButtons.Right) { popup.HidePopup(); BuildTrayMenu(); flyout.ShowFlyout(); }
                 else { flyout.Close(); OnTrayClick(button); }
@@ -1932,6 +2310,7 @@ namespace TrayMixer
                 new MenuItem("-"),
                 new MenuItem(Loc.Text("Фон: Mica", "Background: Mica"), delegate { SetBackdrop(Popup.Mica); }) { RadioCheck = true, Checked = popup.Backdrop == Popup.Mica },
                 new MenuItem(Loc.Text("Фон: Acrylic", "Background: Acrylic"), delegate { SetBackdrop(Popup.Acrylic); }) { RadioCheck = true, Checked = popup.Backdrop == Popup.Acrylic },
+                new MenuItem(Loc.Text("Фон: Матовое стекло", "Background: Frosted Glass"), delegate { SetBackdrop(Popup.FrostedGlass); }) { RadioCheck = true, Checked = popup.Backdrop == Popup.FrostedGlass },
                 new MenuItem("-"),
                 new MenuItem(Loc.Text("Показывать заряд на панели задач", "Show battery on the taskbar"), delegate { ToggleBatteryIndicator(); }) { Checked = batteryTray.Enabled },
                 new MenuItem(Loc.Text("Запускать вместе с Windows", "Run at Windows startup"), delegate { ToggleAutostart(); }) { Checked = IsAutostart() }
@@ -1968,7 +2347,7 @@ namespace TrayMixer
         void ShowSliderNames()
         {
             using (var font = new Font(Theme.FontName, (float)Math.Round(14 * scale), GraphicsUnit.Pixel))
-            using (var dialog = new SliderNameDialog(scale, font))
+            using (var dialog = new SliderNameDialog(scale, font, popup.Backdrop))
                 ShowSettingsDialog(dialog);
             if (popup.Visible) popup.RefreshContent(true);
         }
@@ -1978,7 +2357,7 @@ namespace TrayMixer
             Keys shortcut = MixerPreferences.OpenShortcut;
             using (var font = new Font(Theme.FontName, (float)Math.Round(14 * scale), GraphicsUnit.Pixel))
             using (var dialog = new ShortcutDialog(scale, font, shortcut, shortcut != Keys.None && !icon.HasOpenShortcut,
-                keys => icon.SetOpenShortcut(keys, true)))
+                keys => icon.SetOpenShortcut(keys, true), popup.Backdrop))
                 ShowSettingsDialog(dialog);
         }
 

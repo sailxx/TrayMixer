@@ -13,9 +13,17 @@ namespace TrayMixer
         readonly bool previous, next, toggle, play, pause;
         public readonly string Title, Artist;
         public readonly bool Playing;
+        public readonly long Start, End;
+        public readonly long ReportedPosition;
+        public readonly DateTimeOffset PositionUpdated;
+        readonly long seekStart, seekEnd;
+        readonly double rate;
+        public bool HasTimeline { get { return End > Start; } }
+        public bool CanSeek { get; private set; }
 
         public MediaTrack(GlobalSystemMediaTransportControlsSession session,
-            GlobalSystemMediaTransportControlsSessionPlaybackInfo playback, string title, string artist)
+            GlobalSystemMediaTransportControlsSessionPlaybackInfo playback,
+            GlobalSystemMediaTransportControlsSessionTimelineProperties timeline, string title, string artist)
         {
             this.session = session;
             var controls = playback == null ? null : playback.Controls;
@@ -30,6 +38,47 @@ namespace TrayMixer
             Playing = playback != null && playback.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
             Title = title;
             Artist = artist;
+            if (timeline == null) return;
+            Start = timeline.StartTime.Ticks;
+            End = timeline.EndTime.Ticks;
+            ReportedPosition = timeline.Position.Ticks;
+            PositionUpdated = timeline.LastUpdatedTime;
+            rate = playback == null ? 1 : playback.PlaybackRate.GetValueOrDefault(1);
+            if (double.IsNaN(rate) || double.IsInfinity(rate)) rate = 1;
+            seekStart = Math.Max(Start, timeline.MinSeekTime.Ticks);
+            seekEnd = Math.Min(End, timeline.MaxSeekTime.Ticks);
+            if (timeline.MinSeekTime == TimeSpan.Zero && timeline.MaxSeekTime == TimeSpan.Zero)
+            {
+                seekStart = Start;
+                seekEnd = End;
+            }
+            CanSeek = HasTimeline && seekEnd > seekStart && controls != null && controls.IsPlaybackPositionEnabled;
+        }
+
+        public long Position { get { return PositionAt(DateTimeOffset.UtcNow); } }
+
+        public long PositionAt(DateTimeOffset time)
+        {
+            return ProjectPosition(ReportedPosition,
+                PositionUpdated == default(DateTimeOffset) ? TimeSpan.Zero : time - PositionUpdated);
+        }
+
+        public long ProjectPosition(long position, TimeSpan elapsed)
+        {
+            double advance = Playing ? Math.Max(0, elapsed.Ticks) * rate : 0;
+            return (long)Math.Max(Start, Math.Min(End, position + advance));
+        }
+
+        public bool SameTrack(MediaTrack other)
+        {
+            return other != null && Equals(session, other.session) && Title == other.Title && Artist == other.Artist;
+        }
+
+        public long ClampSeek(long ticks) { return Math.Max(seekStart, Math.Min(seekEnd, ticks)); }
+
+        public Task<bool> Seek(long ticks)
+        {
+            return WindowsMedia.Completion(session.TryChangePlaybackPositionAsync(ClampSeek(ticks)));
         }
 
         public bool CanExecute(MediaAction action)
@@ -80,7 +129,10 @@ namespace TrayMixer
                 if (properties != null) { title = properties.Title; artist = properties.Artist; }
             }
             catch (Exception e) { System.Diagnostics.Debug.WriteLine(e); }
-            return new MediaTrack(session, session.GetPlaybackInfo(), title, artist);
+            GlobalSystemMediaTransportControlsSessionTimelineProperties timeline = null;
+            try { timeline = session.GetTimelineProperties(); }
+            catch (Exception e) { System.Diagnostics.Debug.WriteLine(e); }
+            return new MediaTrack(session, session.GetPlaybackInfo(), timeline, title, artist);
         }
 
         static bool IsTeams(string source)

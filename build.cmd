@@ -7,7 +7,7 @@ set WINMD=%SystemRoot%\System32\WinMetadata
 set WINRT=/r:"%WINMD%\Windows.Media.winmd" /r:"%WINMD%\Windows.Foundation.winmd" /r:"%WINMD%\Windows.Devices.winmd" /r:"%SystemRoot%\Microsoft.NET\assembly\GAC_MSIL\System.Runtime\v4.0_4.0.0.0__b03f5f7f11d50a3a\System.Runtime.dll"
 set WPF=%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\WPF
 set AUTOMATION=/r:"%WPF%\UIAutomationClient.dll" /r:"%WPF%\UIAutomationTypes.dll" /r:"%WPF%\WindowsBase.dll"
-set SOURCES=TrayMixer.cs Audio.cs Brightness.cs BlueLight.cs HeadsetBattery.cs WindowsMedia.cs BatteryTray.cs BatteryStrip.cs
+set SOURCES=TrayMixer.cs Audio.cs Brightness.cs BlueLight.cs HeadsetBattery.cs WindowsMedia.cs BatteryTray.cs BatteryStrip.cs FrostedWallpaper.cs
 if not exist TrayMixer.ico (
   %CSC% %APPFLAGS% %WINRT% %AUTOMATION% /out:TrayMixer.exe %SOURCES% || exit /b 1
   start "" /wait "%~dp0TrayMixer.exe" --make-icon TrayMixer.ico || exit /b 1
